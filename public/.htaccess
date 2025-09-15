@@ -1,7 +1,7 @@
-# /drafter/.htaccess
+# /draftdiff/.htaccess
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /drafter/
+  RewriteBase /draftdiff/
 
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d

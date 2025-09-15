@@ -19,7 +19,8 @@ export class PicksPanelComponent {
   readonly disableGrid = input<boolean>(false);
   readonly isPending = input<boolean>(false);
   readonly isSpec = input<boolean>(false);
-  readonly imageById = input<Record<number, { splashImage: string; squareImage: string; loadingImage: string }>>();
+  readonly imageById =
+    input<Record<number, { splashImage: string; squareImage: string; loadingImage: string }>>();
   readonly pickedChampion = output<ChampionItem>();
 
   imgSplash = (id: number | null): string => {
@@ -29,5 +30,3 @@ export class PicksPanelComponent {
     return image.splashImage;
   };
 }
-
-

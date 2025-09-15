@@ -139,3 +139,28 @@ export type DraftEvent =
   | ConfirmEvent
   | AutoConfirmEvent
   | SetTeamNameEvent;
+
+// --- Helpers for strongly-typed state transformations ---
+
+export function withCountdown(state: DraftState, countdown: number): DraftState {
+  return { ...state, countdown } as DraftState;
+}
+
+export function maskedFromCurrent(state: DraftState): DraftState {
+  const base = createInitialDraftState({
+    roomId: state.roomId,
+    teams: {
+      blue: { name: state.teams.blue.name, ready: false },
+      red: { name: state.teams.red.name, ready: false },
+    },
+  });
+  return {
+    ...state,
+    steps: base.steps,
+    currentStepId: base.currentStepId,
+    currentSide: base.currentSide,
+    countdown: base.countdown,
+    isFinished: true,
+    teams: base.teams,
+  } as DraftState;
+}

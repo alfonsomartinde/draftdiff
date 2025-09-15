@@ -3,7 +3,10 @@ import { DraftState, DraftType, IStep, UserSide, DraftEvent } from '@models/draf
 export type DomainAction =
   | { type: 'CLIENT/JOIN' }
   | { type: 'CLIENT/READY'; payload: { side: UserSide } }
-  | { type: 'CLIENT/SELECT'; payload: { side: UserSide; action: DraftType; championId: number | null } }
+  | {
+      type: 'CLIENT/SELECT';
+      payload: { side: UserSide; action: DraftType; championId: number | null };
+    }
   | { type: 'CLIENT/CONFIRM'; payload: { side: UserSide; action: DraftType } }
   | { type: 'CLIENT/SET_TEAM_NAME'; payload: { side: UserSide; name: string } }
   | { type: 'SERVER/TICK'; payload: { countdown: number } }
@@ -62,7 +65,10 @@ function handleReady(next: DraftState, side: UserSide): ReducerResult {
   return { state: next, effects };
 }
 
-function handleSelect(next: DraftState, payload: { side: UserSide; action: DraftType; championId: number | null }): ReducerResult {
+function handleSelect(
+  next: DraftState,
+  payload: { side: UserSide; action: DraftType; championId: number | null },
+): ReducerResult {
   const effects: ReducerEffect[] = [];
   if (next.isFinished) return { state: next, effects };
   const step = getCurrentStep(next);
@@ -84,7 +90,11 @@ function handleSelect(next: DraftState, payload: { side: UserSide; action: Draft
   return { state: next, effects };
 }
 
-function closeOrAdvance(next: DraftState, logType: 'CLIENT/CONFIRM' | 'CONFIRM', extra: Record<string, any> = {}): ReducerResult {
+function closeOrAdvance(
+  next: DraftState,
+  logType: 'CLIENT/CONFIRM' | 'CONFIRM',
+  extra: Record<string, any> = {},
+): ReducerResult {
   const effects: ReducerEffect[] = [];
   if (next.isFinished) return { state: next, effects };
   const step = getCurrentStep(next);
@@ -119,7 +129,12 @@ function closeOrAdvance(next: DraftState, logType: 'CLIENT/CONFIRM' | 'CONFIRM',
       at: new Date().toISOString(),
       source: 'server',
       type: 'CONFIRM',
-      payload: { side: step.side, action: step.type, championId: step.championId, reason: 'timeout' },
+      payload: {
+        side: step.side,
+        action: step.type,
+        championId: step.championId,
+        reason: 'timeout',
+      },
       countdownAt: 0,
     });
   }
@@ -163,7 +178,11 @@ export function reduce(state: DraftState, action: DomainAction): ReducerResult {
     }
 
     case 'CLIENT/SELECT': {
-      return handleSelect(next, { side: action.payload.side, action: action.payload.action, championId: action.payload.championId });
+      return handleSelect(next, {
+        side: action.payload.side,
+        action: action.payload.action,
+        championId: action.payload.championId,
+      });
     }
 
     case 'CLIENT/CONFIRM': {
@@ -192,5 +211,3 @@ export function reduce(state: DraftState, action: DomainAction): ReducerResult {
 function pushEvent(next: DraftState, evt: DraftEvent) {
   next.events.push(evt);
 }
-
-

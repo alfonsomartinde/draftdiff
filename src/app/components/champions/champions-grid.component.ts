@@ -1,12 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ChampionsActions } from '@state/champions/champions.actions';
 import { selectChampionsItems, selectChampionsStatus } from '@state/champions/champions.selectors';
-import { RiotService } from '@services/riot.service';
 import { ChampionItem } from '@models/champion';
+import { ChampionsActions } from '@state/champions/champions.actions';
 
 @Component({
   selector: 'app-champions-grid',
@@ -17,7 +16,6 @@ import { ChampionItem } from '@models/champion';
 })
 export class ChampionsGridComponent {
   private readonly store = inject(Store);
-  private readonly data = inject(RiotService);
   readonly disabled = input<boolean>(false);
   readonly champions = input<ChampionItem[]>([]);
   readonly usedIds = input<Set<number>>();
@@ -34,6 +32,15 @@ export class ChampionsGridComponent {
   readonly storeItems = toSignal(this.store.select(selectChampionsItems), {
     initialValue: [] as ChampionItem[],
   });
+
+  constructor() {
+    effect(() => {
+      const s = this.status();
+      if (s === 'idle') {
+        this.store.dispatch(ChampionsActions['champion/load']());
+      }
+    });
+  }
 
   /**
    * @description Filters champions by name

@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "angular20": {
+    "draftdiff": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -43,6 +43,12 @@
                 "glob": "**/*",
                 "input": "public"
               }
+            ,
+              {
+                "glob": "**/*",
+                "input": "src/app/assets",
+                "output": "/assets"
+              }
             ],
             "styles": [
               "src/styles.scss"
@@ -55,8 +61,8 @@
           },
           "configurations": {
             "production": {
-              "baseHref": "/drafter/",
-              "deployUrl": "/drafter/",
+              "baseHref": "/draftdiff/",
+              "deployUrl": "/draftdiff/",
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
@@ -89,10 +95,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "angular20:build:production"
+              "buildTarget": "draftdiff:build:production"
             },
             "development": {
-              "buildTarget": "angular20:build:development"
+              "buildTarget": "draftdiff:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -101,7 +107,7 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "development": {
-              "buildTarget": "angular20:build:development"
+              "buildTarget": "draftdiff:build:development"
             }
           },
           "defaultConfiguration": "development"

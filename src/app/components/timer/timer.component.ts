@@ -10,5 +10,3 @@ import { Component, input } from '@angular/core';
 export class TimerComponent {
   readonly value = input<number>(0);
 }
-
-

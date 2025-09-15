@@ -1,33 +1,34 @@
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { APP_INITIALIZER, importProvidersFrom } from '@angular/core';
+import { importProvidersFrom, provideAppInitializer, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { TranslateLoader, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { TranslateHttpLoader, TRANSLATE_HTTP_LOADER_CONFIG } from '@ngx-translate/http-loader';
 
-export function httpLoaderFactory() {
-  return new TranslateHttpLoader();
-}
+// UseClass lets Angular DI construct TranslateHttpLoader and inject HttpClient correctly
 
 export function provideI18n() {
   return [
-    importProvidersFrom(HttpClientModule),
     importProvidersFrom(
       TranslateModule.forRoot({
+        fallbackLang: 'es',
         loader: {
           provide: TranslateLoader,
-          useFactory: httpLoaderFactory,
-          deps: [HttpClient],
+          useClass: TranslateHttpLoader,
         },
       }),
     ),
     {
-      provide: APP_INITIALIZER,
-      multi: true,
-      deps: [TranslateService],
-      useFactory: (translate: TranslateService) => () => {
-        // Establece idioma por defecto (fallback) y el idioma activo
-        translate.setDefaultLang('es');
-        translate.use('es');
-      },
+      provide: TRANSLATE_HTTP_LOADER_CONFIG,
+      useFactory: () => ({
+        http: inject(HttpClient),
+        prefix: '/assets/i18n/',
+        suffix: '.json',
+      }),
     },
+    provideAppInitializer(() => {
+      // Evita ejecutar en SSR para no bloquear el prerender
+      if (typeof window === 'undefined') return;
+      const translate = inject(TranslateService);
+      translate.use('es');
+    }),
   ];
 }

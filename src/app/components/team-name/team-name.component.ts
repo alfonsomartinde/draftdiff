@@ -27,5 +27,3 @@ export class TeamNameComponent {
   readonly name = input<string>('Team');
   readonly current = input<boolean>(false);
 }
-
-

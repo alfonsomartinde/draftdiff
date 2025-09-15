@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 import { DraftActions } from './draft.actions';
-import { IStep, DraftState, createInitialDraftState } from '@models/draft';
+import { DraftState, createInitialDraftState } from '@models/draft';
 
 export const initialDraftState: DraftState = createInitialDraftState();
 
@@ -60,8 +60,8 @@ export const draftReducer = createReducer(
 
     if (!step || step.side !== side || step.type !== action) return state;
 
-    const steps = state.steps.slice() as IStep[];
-    steps[idx] = { ...step, championId } as IStep;
+    const steps = state.steps.slice();
+    steps[idx] = { ...step, championId };
 
     return {
       ...state,
@@ -76,13 +76,13 @@ export const draftReducer = createReducer(
 
     if (!step || step.side !== side || step.type !== action) return state;
 
-    const steps = state.steps.slice() as IStep[];
+    const steps = state.steps.slice();
 
     // Current step set to not pending
     steps[idx] = {
       ...step,
       pending: false,
-    } as IStep;
+    };
 
     const nextIdx = idx + 1;
     const finished = nextIdx >= steps.length;
@@ -92,7 +92,7 @@ export const draftReducer = createReducer(
       steps[nextIdx] = {
         ...steps[nextIdx],
         pending: true,
-      } as IStep;
+      };
     }
 
     return {

@@ -19,7 +19,13 @@ import { TeamNameComponent } from '@components/team-name/team-name.component';
 
 @Component({
   selector: 'app-picks-bans-panel',
-  imports: [CommonModule, BansPanelComponent, PicksPanelComponent, TimerComponent, TeamNameComponent],
+  imports: [
+    CommonModule,
+    BansPanelComponent,
+    PicksPanelComponent,
+    TimerComponent,
+    TeamNameComponent,
+  ],
   standalone: true,
   templateUrl: './picks-bans-panel.component.html',
   styleUrls: ['./picks-bans-panel.component.scss'],

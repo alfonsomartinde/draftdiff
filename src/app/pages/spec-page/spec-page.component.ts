@@ -14,9 +14,8 @@ import {
   selectChampionsImageById,
   selectChampionsStatus,
 } from '@state/champions/champions.selectors';
-import { RiotService } from '@services/riot.service';
 import { WorkerClientService } from '@services/worker-client.service';
-import { createInitialDraftState } from '@models/draft';
+import { maskedFromCurrent, withCountdown } from '@models/draft';
 import { IPostMessage } from '@models/worker';
 import { filter, take } from 'rxjs/operators';
 
@@ -31,7 +30,6 @@ export class SpecPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly title = inject(Title);
   private readonly store = inject(Store);
-  private readonly data = inject(RiotService);
   private readonly client = inject(WorkerClientService);
   protected readonly roomId = signal<string>('');
   // Draft state
@@ -101,8 +99,7 @@ export class SpecPageComponent {
     effect(() => {
       if (this.hasCapturedInitial()) return;
       // Wait for the first SERVER/STATE from socket to avoid capturing the pre-hydrate default
-      this.client
-        .incoming$
+      this.client.incoming$
         .pipe(
           filter((m: IPostMessage | null): m is IPostMessage => !!m && m.type === 'SERVER/STATE'),
           take(1),
@@ -114,25 +111,10 @@ export class SpecPageComponent {
         });
     });
 
-    // Load champions via NgRx + RiotService caching
+    // Trigger champions load; effect will guard by status/items
     effect(() => {
-      const items = this.championsItems();
       const status = this.championsStatus();
-      if (status === 'idle' && (items?.length ?? 0) === 0) {
-        (async () => {
-          this.store.dispatch(ChampionsActions['champion/load']());
-          try {
-            const list = await this.data.getChampions();
-            this.store.dispatch(ChampionsActions['champion/load-success']({ items: list }));
-          } catch (err: any) {
-            this.store.dispatch(
-              ChampionsActions['champion/load-failure']({
-                error: err?.message ?? 'Failed to load champions',
-              }),
-            );
-          }
-        })();
-      }
+      if (status === 'idle') this.store.dispatch(ChampionsActions['champion/load']());
     });
 
     // In deferred spec mode: mask state to only show team names before starting replay
@@ -149,24 +131,7 @@ export class SpecPageComponent {
       const hasEvents = Array.isArray(s.events) && s.events.length > 0;
       if (!hasEvents) return;
 
-      const base = createInitialDraftState({
-        roomId: s.roomId,
-        teams: {
-          blue: { name: s.teams.blue.name, ready: false },
-          red: { name: s.teams.red.name, ready: false },
-        },
-      });
-
-      const masked = {
-        ...s,
-        steps: base.steps,
-        currentStepId: base.currentStepId,
-        currentSide: base.currentSide,
-        countdown: base.countdown,
-        isFinished: true,
-        teams: base.teams,
-      } as any;
-
+      const masked = maskedFromCurrent(s as any);
       this.store.dispatch(DraftActions['draft/hydrate']({ newState: masked }));
       this.isMasked.set(true);
     });
@@ -183,22 +148,7 @@ export class SpecPageComponent {
   private resetToMaskedBase(): void {
     const s = this.draft();
     if (!s) return;
-    const base = createInitialDraftState({
-      roomId: s.roomId,
-      teams: {
-        blue: { name: s.teams.blue.name, ready: false },
-        red: { name: s.teams.red.name, ready: false },
-      },
-    });
-    const masked = {
-      ...s,
-      steps: base.steps,
-      currentStepId: base.currentStepId,
-      currentSide: base.currentSide,
-      countdown: base.countdown,
-      isFinished: true,
-      teams: base.teams,
-    } as any;
+    const masked = maskedFromCurrent(s as any);
     this.store.dispatch(DraftActions['draft/hydrate']({ newState: masked }));
     this.isMasked.set(true);
     // Reset runtime state and slider
@@ -234,6 +184,20 @@ export class SpecPageComponent {
     if (this.isReplaying()) return;
     const state = this.draft();
     if (!state || !Array.isArray(state.events) || state.events.length === 0) return;
+    // Prepare spec replay environment and teams readiness
+    this.ensureSpecReplayReady();
+    this.isReplaying.set(true);
+    const events = state.events;
+
+    // Apply any initial events at countdown 30 immediately
+    this.dispatchCountdownTick(this.replayCountdown());
+    this.applyPendingEventsAtCurrentCountdown(events);
+
+    // Begin ticking loop
+    this.beginReplayInterval(events);
+  }
+
+  private ensureSpecReplayReady(): void {
     // We already have all events: disconnect socket in spec mode to avoid further updates
     this.client.disconnect();
     // Ensure both teams are marked ready so UI reflects started state (pending highlights)
@@ -242,57 +206,52 @@ export class SpecPageComponent {
       this.store.dispatch(DraftActions['draft/ready']({ roomId, side: 'blue' }));
       this.store.dispatch(DraftActions['draft/ready']({ roomId, side: 'red' }));
     }
-    this.isReplaying.set(true);
-    const events = state.events;
+  }
 
-    const dispatchTick = (value: number) => {
-      const current = this.draft();
-      if (current) {
-        this.store.dispatch(
-          DraftActions['draft/tick']({ newState: { ...current, countdown: value } as any }),
-        );
+  private dispatchCountdownTick(value: number): void {
+    const current = this.draft();
+    if (current) {
+      this.store.dispatch(
+        DraftActions['draft/tick']({ newState: withCountdown(current as any, value) }),
+      );
+    }
+  }
+
+  private applyPendingEventsAtCurrentCountdown(events: any[]): void {
+    // Apply all events recorded at the current countdown value.
+    // If a CONFIRM occurs, reset to 30 and immediately process events at 30 as well
+    // before allowing the interval to continue. This prevents missing events at 30.
+    let target = this.replayCountdown();
+    // Loop may handle multiple waves when target jumps to 30 after a confirm
+    // and there are immediate events at countdownAt=30.
+    while (this.replayIdx() < events.length) {
+      const idx = this.replayIdx();
+      if (events[idx].countdownAt !== target) break;
+      const ev = events[idx];
+      this.replayIdx.set(idx + 1);
+      this.applyEvent(ev);
+      // Update external slider index to reflect applied event
+      this.historyIndex.set(this.replayIdx() - 1);
+      if (ev.type === 'CLIENT/CONFIRM' || ev.type === 'CONFIRM') {
+        // Next step timer resets to 30 unless finished
+        this.replayCountdown.set(30);
+        target = this.replayCountdown();
+        this.dispatchCountdownTick(this.replayCountdown());
+        // continue loop to absorb any events that also happened at 30
+        // fallthrough to while condition without explicit continue
       }
-    };
+    }
+  }
 
-    const applyPending = () => {
-      // Apply all events recorded at the current countdown value.
-      // If a CONFIRM occurs, reset to 30 and immediately process events at 30 as well
-      // before allowing the interval to continue. This prevents missing events at 30.
-      let target = this.replayCountdown();
-      // Loop may handle multiple waves when target jumps to 30 after a confirm
-      // and there are immediate events at countdownAt=30.
-      while (this.replayIdx() < events.length) {
-        const idx = this.replayIdx();
-        if (events[idx].countdownAt !== target) break;
-        const ev = events[idx];
-        this.replayIdx.set(idx + 1);
-        this.applyEvent(ev);
-        // Update external slider index to reflect applied event
-        this.historyIndex.set(this.replayIdx() - 1);
-        if (ev.type === 'CLIENT/CONFIRM' || ev.type === 'CONFIRM') {
-          // Next step timer resets to 30 unless finished
-          this.replayCountdown.set(30);
-          target = this.replayCountdown();
-          dispatchTick(this.replayCountdown());
-          // continue loop to absorb any events that also happened at 30
-          // fallthrough to while condition without explicit continue
-        }
-      }
-    };
-
-    // Apply any initial events at countdown 30 immediately
-    dispatchTick(this.replayCountdown());
-    applyPending();
-
-    // Start ticking every second
+  private beginReplayInterval(events: any[]): void {
     this.replayTimer = setInterval(() => {
       // Decrement countdown
       const next = Math.max(0, this.replayCountdown() - 1);
       this.replayCountdown.set(next);
-      dispatchTick(this.replayCountdown());
+      this.dispatchCountdownTick(this.replayCountdown());
 
       // Apply events that occurred at this countdown value
-      applyPending();
+      this.applyPendingEventsAtCurrentCountdown(events);
 
       // Stop if finished (no more events and countdown has reached 0)
       if (this.replayIdx() >= events.length && this.replayCountdown() <= 0) {
@@ -303,14 +262,14 @@ export class SpecPageComponent {
     }, 1000);
   }
 
-  private applyEvent(ev: any): void {
+  private applyEvent(ev: import('@models/draft').DraftEvent): void {
     const roomId = this.roomId();
     if (!roomId || !ev || typeof ev.type !== 'string') return;
     // Reflect countdown as captured at event time
     const current = this.draft();
     if (current) {
       this.store.dispatch(
-        DraftActions['draft/tick']({ newState: { ...current, countdown: ev.countdownAt } as any }),
+        DraftActions['draft/tick']({ newState: withCountdown(current as any, ev.countdownAt) }),
       );
     }
     switch (ev.type) {
@@ -332,13 +291,21 @@ export class SpecPageComponent {
       case 'CLIENT/CONFIRM':
       case 'CONFIRM': {
         this.store.dispatch(
-          DraftActions['draft/confirm']({ roomId, side: ev.payload.side, action: ev.payload.action }),
+          DraftActions['draft/confirm']({
+            roomId,
+            side: ev.payload.side,
+            action: ev.payload.action,
+          }),
         );
         break;
       }
       case 'CLIENT/SET_TEAM_NAME': {
         this.store.dispatch(
-          DraftActions['draft/set-team-name']({ roomId, side: ev.payload.side, name: ev.payload.name }),
+          DraftActions['draft/set-team-name']({
+            roomId,
+            side: ev.payload.side,
+            name: ev.payload.name,
+          }),
         );
         break;
       }

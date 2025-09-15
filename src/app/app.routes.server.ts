@@ -5,8 +5,8 @@ export const serverRoutes: ServerRoute[] = [
   { path: ':roomId/blue', renderMode: RenderMode.Server },
   { path: ':roomId/red', renderMode: RenderMode.Server },
   { path: ':roomId/spec', renderMode: RenderMode.Server },
-  // Página inicial: Prerender para mejor LCP
-  { path: '', renderMode: RenderMode.Prerender },
+  // Página inicial: SSR (desactivamos prerender para evitar NG0201 durante extracción)
+  { path: '', renderMode: RenderMode.Server },
   // Fallback: SSR por defecto
   { path: '**', renderMode: RenderMode.Server },
 ];

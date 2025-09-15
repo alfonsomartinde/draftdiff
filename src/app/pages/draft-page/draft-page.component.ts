@@ -21,7 +21,7 @@ import {
   selectTeams,
 } from '@state/draft/draft.selectors';
 import { WorkerClientService } from '@services/worker-client.service';
-import { RiotService } from '@services/riot.service';
+import { DraftActions } from '@state/draft/draft.actions';
 import { PicksBansPanelComponent } from '@components/picks-bans/picks-bans-panel.component';
 import { DraftSide, UserSide, IStep, ITeam } from '@models/draft';
 
@@ -35,7 +35,6 @@ import { DraftSide, UserSide, IStep, ITeam } from '@models/draft';
 export class DraftPageComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly store = inject(Store);
-  private readonly data = inject(RiotService);
   private readonly title = inject(Title);
   private readonly client = inject(WorkerClientService);
 
@@ -157,25 +156,10 @@ export class DraftPageComponent {
 
     // Countdown derived directly in UI via PicksBansPanel
 
-    // Load champions on page entry using NgRx + RiotService caching
+    // Trigger champions load; effect will guard by status/items
     effect(() => {
-      const items = this.championsItems();
       const status = this.championsStatus();
-      if (status === 'idle' && (items?.length ?? 0) === 0) {
-        (async () => {
-          this.store.dispatch(ChampionsActions['champion/load']());
-          try {
-            const list = await this.data.getChampions();
-            this.store.dispatch(ChampionsActions['champion/load-success']({ items: list }));
-          } catch (err: any) {
-            this.store.dispatch(
-              ChampionsActions['champion/load-failure']({
-                error: err?.message ?? 'Failed to load champions',
-              }),
-            );
-          }
-        })();
-      }
+      if (status === 'idle') this.store.dispatch(ChampionsActions['champion/load']());
     });
   }
 
@@ -183,7 +167,7 @@ export class DraftPageComponent {
     if (!this.roomId()) return;
     const side = this.mySide();
     if (side === 'spec') return;
-    this.client.ready({ roomId: this.roomId(), side });
+    this.store.dispatch(DraftActions['draft/ready']({ roomId: this.roomId(), side }));
   }
 
   pickedChampion(c: ChampionItem): void {
@@ -194,7 +178,14 @@ export class DraftPageComponent {
     if (side === 'spec') return;
     const action = this.currentStep()?.type;
     if (!action) return;
-    this.client.selectChampion({ roomId: this.roomId(), side, action, championId: c.id });
+    this.store.dispatch(
+      DraftActions['draft/select']({
+        roomId: this.roomId(),
+        side,
+        action,
+        championId: c.id,
+      }),
+    );
   }
 
   confirmSelection(): void {
@@ -204,6 +195,6 @@ export class DraftPageComponent {
     if (side === 'spec') return;
     const action = this.currentStep()?.type;
     if (!action) return;
-    this.client.confirm({ roomId: this.roomId(), side, action });
+    this.store.dispatch(DraftActions['draft/confirm']({ roomId: this.roomId(), side, action }));
   }
 }

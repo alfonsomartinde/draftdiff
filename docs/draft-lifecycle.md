@@ -166,8 +166,43 @@ Nota: `SERVER/TICK` no se persiste en la tabla `events` (solo es broadcast en ti
 
 ## Consulta del historial de eventos
 
-- Socket: `socket.emit('room:events', { roomId }, (rows) => { /* ... */ })`
-- Servidor: maneja `room:events` devolviendo `state.events` del room: `[{ seq, at, source, type, payload, countdownAt }, ...]`.
+- Fuente canónica: `state.events`, incluido dentro de cada `SERVER/STATE`.
+- Opcional: se puede exponer un canal (por ejemplo, `room:events`) que devuelva `state.events` del room `[{ seq, at, source, type, payload, countdownAt }, ...]`.
+
+---
+
+## Diagrama de flujo: acciones, efectos y persistencia
+
+```
+Cliente (UI)
+   |
+   |  CLIENT/* (JOIN/READY/SELECT/CONFIRM/SET_TEAM_NAME)
+   v
+Socket.io (server.ts → eventsService)
+   |
+   | reduce(state, action)  →  { nextState, effects[] }
+   v
+Orquestador (eventsService.applyEffects)
+   |\
+   | \
+   |  +-- persist --------> DB: UPDATE rooms.state (incluye state.events) --+
+   |  |                                                            ^        |
+   |  |                                                            |        |
+   |  +-- emit-state ------> io.emit SERVER/STATE -----------------+        |
+   |  +-- emit-tick -------> io.emit SERVER/TICK (sin DB)                   |
+   |  +-- start-timer ----> setInterval → SERVER/TICK → AUTO_CONFIRM (si 0) |
+   |  +-- stop-timer -----> clearInterval                                    |
+   |  +-- log-event ------> push a state.events (memoria; persiste con persist)
+   v
+Estado actualizado (runtime y, si hubo persist, también en DB)
+
+                     [Modo Spec/Replay]
+                     ------------------
+                     - Cliente desconecta socket al iniciar replay
+                     - Reproduce state.events localmente aplicando acciones NgRx:
+                       draft/ready, draft/select, draft/confirm, draft/tick
+                     - No hay SERVER/STATE/TICK durante la reproducción
+```
 
 ---
 
@@ -512,7 +547,7 @@ El reductor NO realiza IO. Solo calcula `state` y una lista de `effects` a ejecu
 2) Persistir: si hay `persist` en `effects` → `updateRoomState(roomId, next, io)`
 3) Emitir estado: si hay `emit-state` → `io.to(roomId).emit('message', { type: 'SERVER/STATE', payload: { state: next } })`
 4) Timers: `start-timer` o `stop-timer` según corresponda
-5) Logging de dominio: `log-event` → `saveEvent(...)` (conforme reglas: solo si `started` y excluyendo `PING/JOIN`)
+5) Logging de dominio: `log-event` → añadir a `state.events` en memoria (solo si `started` y excluyendo `PING/JOIN`; no se inserta en DB)
 6) TICK: si hay `emit-tick` lo emite el lazo del timer; el reductor no persiste en TICK
 
 ### Mapeo de acciones a efectos

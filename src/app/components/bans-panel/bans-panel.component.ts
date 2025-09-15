@@ -22,5 +22,3 @@ export class BansPanelComponent {
     return image.squareImage;
   };
 }
-
-

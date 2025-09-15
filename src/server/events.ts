@@ -106,7 +106,10 @@ class EventsService {
   async handleReady(io: Server, roomId: string, room: RoomRuntime, payload: any): Promise<void> {
     if (!payload?.side) return;
     if (!room?.state) return;
-    const action: DomainAction = { type: 'CLIENT/READY', payload: { side: payload.side as UserSide } };
+    const action: DomainAction = {
+      type: 'CLIENT/READY',
+      payload: { side: payload.side as UserSide },
+    };
     const { state: next, effects } = reduce(room.state, action);
     room.state = next;
     await this.applyEffects(room, roomId, io, effects);
@@ -162,6 +165,42 @@ class EventsService {
     return room.state?.events ?? [];
   }
 
+  private getEffectHandlers() {
+    return {
+      persist: async ({ room, roomId, io }: { room: RoomRuntime; roomId: string; io: Server }) => {
+        try {
+          await databaseService.updateRoomState(roomId, room.state!, io);
+        } catch {}
+      },
+      'emit-state': ({
+        room,
+        roomId,
+        io,
+        hasPersist,
+      }: {
+        room: RoomRuntime;
+        roomId: string;
+        io: Server;
+        hasPersist: boolean;
+      }) => {
+        if (hasPersist) return; // avoid duplicate emission; persist already emits SERVER/STATE
+        io.to(roomId).emit('message', { type: 'SERVER/STATE', payload: { state: room.state } });
+      },
+      'emit-tick': ({ room, roomId, io }: { room: RoomRuntime; roomId: string; io: Server }) => {
+        io.to(roomId).emit('message', { type: 'SERVER/TICK', payload: { state: room.state } });
+      },
+      'start-timer': ({ room, roomId, io }: { room: RoomRuntime; roomId: string; io: Server }) => {
+        this.startTimer(room, roomId, io);
+      },
+      'stop-timer': ({ room, roomId }: { room: RoomRuntime; roomId: string }) => {
+        this.resetTimer(room, roomId);
+      },
+      'log-event': (_ctx: { room: RoomRuntime; roomId: string }) => {
+        // no-op
+      },
+    } as const;
+  }
+
   private async applyEffects(
     room: RoomRuntime,
     roomId: string,
@@ -170,37 +209,13 @@ class EventsService {
   ): Promise<void> {
     if (!room?.state) return;
     const hasPersist = effects.some((e) => e.kind === 'persist');
+    const handlers = this.getEffectHandlers();
 
     for (const effect of effects) {
-      switch (effect.kind) {
-        case 'persist': {
-          try {
-            await databaseService.updateRoomState(roomId, room.state, io);
-          } catch {}
-          break;
-        }
-        case 'emit-state': {
-          if (hasPersist) break; // evitar doble emisión: persist ya emite SERVER/STATE
-          io.to(roomId).emit('message', { type: 'SERVER/STATE', payload: { state: room.state } });
-          break;
-        }
-        case 'emit-tick': {
-          io.to(roomId).emit('message', { type: 'SERVER/TICK', payload: { state: room.state } });
-          break;
-        }
-        case 'start-timer': {
-          this.startTimer(room, roomId, io);
-          break;
-        }
-        case 'stop-timer': {
-          this.resetTimer(room, roomId);
-          break;
-        }
-        case 'log-event': {
-          // in-room logging; no DB action
-          break;
-        }
-      }
+      const kind = effect.kind;
+      const handler = (handlers as any)[kind] as Function | undefined;
+      if (!handler) continue;
+      await handler({ room, roomId, io, hasPersist, effect });
     }
   }
 }

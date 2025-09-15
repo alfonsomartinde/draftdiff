@@ -142,116 +142,107 @@ function generateRoomId(): string {
  * Socket.io connection
  */
 io.on('connection', (socket) => {
-  socket.on('message', async (msg: IPostMessage) => {
-    if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
-    const type: string = msg.type;
-    const payload: any = msg.payload ?? {};
-    const roomId: string = String(msg.roomId ?? 'local').trim();
-
-    if (!roomId || roomId === 'local') return;
-
-    const room = eventsService.getRoom(roomId);
-
-    if (!type) return;
-    // NOTE: For JOIN and PING we do not require room.state to exist
-    // For other events, ensure we have a valid state/step
-    const ensureStep = () => {
-      if (!room.state) return false;
-      const base = room.state;
-      const stepIdx = base.currentStepId;
-      const step = base.steps[stepIdx];
-      return !!step;
-    };
-
-    switch (type) {
-      case 'CLIENT/JOIN': {
-        socket.join(roomId);
-        // Hydrate in-memory state from DB if missing
-        if (!room.state) {
-          try {
-            const conn = await databaseService.getConnection();
-            try {
-              const [rows] = await conn.query(
-                'SELECT state FROM rooms WHERE id=? LIMIT 1',
-                [roomId],
-              );
-              const row = Array.isArray(rows) ? (rows as any)[0] : undefined;
-              const raw = row?.state;
-              if (raw != null) {
-                let parsed: any;
-                if (typeof raw === 'string') {
-                  parsed = JSON.parse(raw);
-                } else if (Buffer.isBuffer(raw)) {
-                  parsed = JSON.parse(raw.toString('utf8'));
-                } else if (typeof raw === 'object') {
-                  parsed = raw; // already parsed by driver
-                }
-                if (parsed) {
-                  room.state = parsed as DraftState;
-                }
-              }
-            } finally {
-              conn.release();
-            }
-          } catch (e) {
-            console.error('[socket] hydrate state failed', e);
-          }
-        }
-        eventsService.handleJoin(io, roomId);
-        break;
-      }
-
-      // if type is PING
-      case 'CLIENT/PING': {
-        // Responder al emisor y a la sala por compatibilidad
-        socket.emit('message', { type: 'SERVER/PONG' });
-        io.to(roomId).emit('message', { type: 'SERVER/PONG' });
-        break;
-      }
-
-      // if type is READY, payload: { side }
-      case 'CLIENT/READY': {
-        if (!ensureStep()) return;
-        console.log('CLIENT/READY received', payload);
-        await eventsService.handleReady(io, roomId, room, payload);
-        break;
-      }
-
-      // if type is SELECT, payload: { side, action, championId }
-      case 'CLIENT/SELECT': {
-        if (!ensureStep()) return;
-        console.log('CLIENT/SELECT received', payload);
-        await eventsService.handleSelect(io, roomId, room, payload);
-        break;
-      }
-
-      // if type is CONFIRM, payload: { side, action }
-      case 'CLIENT/CONFIRM': {
-        if (!ensureStep()) return;
-        console.log('CLIENT/CONFIRM received', payload);
-        await eventsService.handleConfirm(io, roomId, room, payload);
-        break;
-      }
-
-      // if type is SET_TEAM_NAME, payload: { side, name }
-      case 'CLIENT/SET_TEAM_NAME': {
-        if (!ensureStep()) return;
-        console.log('CLIENT/SET_TEAM_NAME received', payload);
-        await eventsService.handleSetTeamName(io, roomId, room, payload);
-        break;
-      }
-      default: {
-        io.to(roomId).emit('message', {
-          type: 'SERVER/' + type,
-          payload: {
-            state: room.state,
-            ...payload,
-          },
-        });
-      }
-    }
-  });
+  socket.on('message', (msg: IPostMessage) => processSocketMessage(io, socket, msg));
 });
+
+function ensureStepExists(room: any): boolean {
+  if (!room?.state) return false;
+  const base = room.state as DraftState;
+  const step = base.steps[base.currentStepId];
+  return !!step;
+}
+
+async function hydrateStateIfMissing(roomId: string, room: any): Promise<void> {
+  if (room?.state) return;
+  try {
+    const conn = await databaseService.getConnection();
+    try {
+      const [rows] = await conn.query('SELECT state FROM rooms WHERE id=? LIMIT 1', [roomId]);
+      const row = Array.isArray(rows) ? (rows as any)[0] : undefined;
+      const raw = row?.state;
+      if (raw != null) {
+        let parsed: any;
+        if (typeof raw === 'string') parsed = JSON.parse(raw);
+        else if (Buffer.isBuffer(raw)) parsed = JSON.parse(raw.toString('utf8'));
+        else if (typeof raw === 'object') parsed = raw; // already parsed by driver
+        if (parsed) room.state = parsed as DraftState;
+      }
+    } finally {
+      conn.release();
+    }
+  } catch (e) {
+    console.error('[socket] hydrate state failed', e);
+  }
+}
+
+type MessageContext = {
+  io: Server;
+  socket: any;
+  roomId: string;
+  room: any;
+  payload: any;
+  type: string;
+};
+
+const messageHandlers: Record<string, (ctx: MessageContext) => Promise<void> | void> = {
+  'CLIENT/JOIN': async ({ io, socket, roomId, room }) => {
+    socket.join(roomId);
+    await hydrateStateIfMissing(roomId, room);
+    eventsService.handleJoin(io, roomId);
+  },
+  'CLIENT/PING': ({ io, socket, roomId }) => {
+    socket.emit('message', { type: 'SERVER/PONG' });
+    io.to(roomId).emit('message', { type: 'SERVER/PONG' });
+  },
+  'CLIENT/READY': async ({ io, roomId, room, payload }) => {
+    if (!ensureStepExists(room)) return;
+    console.log('CLIENT/READY received', payload);
+    await eventsService.handleReady(io, roomId, room, payload);
+  },
+  'CLIENT/SELECT': async ({ io, roomId, room, payload }) => {
+    if (!ensureStepExists(room)) return;
+    console.log('CLIENT/SELECT received', payload);
+    await eventsService.handleSelect(io, roomId, room, payload);
+  },
+  'CLIENT/CONFIRM': async ({ io, roomId, room, payload }) => {
+    if (!ensureStepExists(room)) return;
+    console.log('CLIENT/CONFIRM received', payload);
+    await eventsService.handleConfirm(io, roomId, room, payload);
+  },
+  'CLIENT/SET_TEAM_NAME': async ({ io, roomId, room, payload }) => {
+    if (!ensureStepExists(room)) return;
+    console.log('CLIENT/SET_TEAM_NAME received', payload);
+    await eventsService.handleSetTeamName(io, roomId, room, payload);
+  },
+};
+
+function emitDefault(io: Server, roomId: string, payload: any, type: string, state: DraftState) {
+  io.to(roomId).emit('message', {
+    type: 'SERVER/' + type,
+    payload: {
+      state,
+      ...payload,
+    },
+  });
+}
+
+async function processSocketMessage(io: Server, socket: any, msg: IPostMessage): Promise<void> {
+  if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') return;
+  const type: string = msg.type;
+  const payload: any = msg.payload ?? {};
+  const roomId: string = String(msg.roomId ?? 'local').trim();
+  if (!roomId || roomId === 'local') return;
+  if (!type) return;
+
+  const room = eventsService.getRoom(roomId);
+  const handler = messageHandlers[type];
+  if (handler) {
+    await handler({ io, socket, roomId, room, payload, type });
+    return;
+  }
+
+  emitDefault(io, roomId, payload, type, room.state as DraftState);
+}
 
 /**
  * Handle all other requests by rendering the Angular application.
