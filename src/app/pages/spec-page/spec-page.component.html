@@ -1,0 +1,16 @@
+<app-picks-bans-panel [imageById]="imageById()" />
+
+@if (isReplayMode()) {
+  <div class="row mt-3">
+    <div class="col-12 d-flex justify-content-center">
+      <button
+        type="button"
+        class="btn btn-primary antonio-700 px-4 py-2"
+        (click)="startReplay()"
+        [disabled]="isReplaying()"
+      >
+        Empezar
+      </button>
+    </div>
+  </div>
+}

@@ -20,6 +20,24 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "prerender": false,
+            "allowedCommonJsDependencies": [
+              "debug",
+              "xmlhttprequest-ssl"
+            ],
+            "fileReplacements": [
+              {
+                "replace": "src/environments/environment.ts",
+                "with": "src/environments/environment.ts"
+              }
+            ],
+            "stylePreprocessorOptions": {
+              "sass": {
+                "silenceDeprecations": [
+                  "import"
+                ]
+              }
+            },
             "assets": [
               {
                 "glob": "**/*",
@@ -28,14 +46,27 @@
             ],
             "styles": [
               "src/styles.scss"
-            ]
+            ],
+            "server": "src/main.server.ts",
+            "outputMode": "server",
+            "ssr": {
+              "entry": "src/server.ts"
+            }
           },
           "configurations": {
             "production": {
+              "baseHref": "/drafter/",
+              "deployUrl": "/drafter/",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "700kB",
                   "maximumError": "1MB"
                 },
                 {
@@ -66,6 +97,15 @@
           },
           "defaultConfiguration": "development"
         },
+        "serve-ssr": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "development": {
+              "buildTarget": "angular20:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
         "extract-i18n": {
           "builder": "@angular/build:extract-i18n"
         },
@@ -87,5 +127,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "4b017906-42cd-46cf-8253-b5cdf2966f27"
   }
 }

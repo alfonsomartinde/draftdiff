@@ -1,0 +1,53 @@
+<div class="container py-4">
+  <h1 class="h4 mb-3">Crear sala</h1>
+  <form class="row g-3" (ngSubmit)="create()">
+    <div class="col-md-4">
+      <label class="form-label" for="blueTeamName">Equipo azul</label>
+      <input
+        id="blueTeamName"
+        class="form-control"
+        placeholder="Equipo azul"
+        [(ngModel)]="blueTeamName"
+        name="blueTeamName"
+        required
+      />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="redTeamName">Equipo rojo</label>
+      <input
+        id="redTeamName"
+        class="form-control"
+        placeholder="Equipo rojo"
+        [(ngModel)]="redTeamName"
+        name="redTeamName"
+        required
+      />
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button class="btn btn-primary w-100" type="submit">Crear</button>
+    </div>
+  </form>
+
+  @if (roomId() && roomId() !== 'local') {
+    <div class="mt-4">
+      <h2 class="h5">Enlaces</h2>
+      <ul>
+        <li>
+          <a [routerLink]="['/', roomId(), 'blue']" class="link-primary"
+            >/{{ roomId() }}/blue</a
+          >
+        </li>
+        <li>
+          <a [routerLink]="['/', roomId(), 'red']" class="link-danger"
+            >/{{ roomId() }}/red</a
+          >
+        </li>
+        <li>
+          <a [routerLink]="['/', roomId(), 'spec']" class="link-secondary"
+            >/{{ roomId() }}/spec</a
+          >
+        </li>
+      </ul>
+    </div>
+  }
+</div>

@@ -1,0 +1,49 @@
+<div class="row g-3 align-items-start mb-4 panel-bans">
+  <div class="col-3">
+    <div class="d-flex gap-1 bans blue">
+      @for (step of bansBlue(); track $index) {
+        <div class="ban blue rounded position-relative"
+          [class.placeholder]="step?.championId == null"
+          [class.pending]="step?.pending && hasStarted()">
+          @if (step?.championId != null) {
+            <img
+              [src]="imgSquare(step?.championId ?? null)"
+              class="rounded champion-image"
+              [class.placeholder]="step?.championId == null"
+              [class.pending]="step?.pending && hasStarted()"
+              alt="Champion"
+              title="Champion"
+            />
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="col-6 text-center">
+    <ng-content select="[bans-center]"></ng-content>
+  </div>
+  
+  <div class="col-3 text-end">
+    <div class="d-flex gap-1 bans red flex-row-reverse">
+      @for (step of bansRed(); track $index) {
+        <div class="ban red rounded"
+          [class.placeholder]="step?.championId == null"
+          [class.pending]="step?.pending && hasStarted()">
+          @if (step?.championId != null) {
+            <img
+              [src]="imgSquare(step?.championId ?? null)"
+              class="rounded champion-image"
+              [class.placeholder]="step?.championId == null"
+              [class.pending]="step?.pending && hasStarted()"
+              alt="Champion"
+              title="Champion"
+            />
+          }
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+

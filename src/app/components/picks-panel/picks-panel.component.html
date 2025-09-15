@@ -1,0 +1,62 @@
+<div class="row g-3 align-items-start mb-3">
+  <div class="col-3">
+    <div class="d-flex gap-2 picks blue">
+      @for (step of picksBlue(); track $index) {
+        <div class="pick blue rounded position-relative"
+          [class.placeholder]="step?.championId == null"
+          [class.pending]="step?.pending && isPending()">
+          @if (step?.championId != null) {
+            <img
+              [src]="imgSplash(step?.championId ?? null)"
+              class="rounded champion-image"
+              [class.placeholder]="step?.championId == null"
+              [class.pending]="step?.pending && isPending()"
+              alt="Champion"
+              title="Champion"
+            />
+            <span class="badge bg-black text-white p-2 position-absolute bottom-0 start-0">
+              {{ '' }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="col-6 text-center">
+    <app-champions-grid
+      [champions]="champions()"
+      [usedIds]="usedIds()"
+      (pickedChampion)="pickedChampion.emit($event)"
+      [disabled]="disableGrid()"
+      [isPending]="isPending()"
+      [isSpec]="isSpec()"
+    />
+  </div>
+
+  <div class="col-3 text-end">
+    <div class="d-flex gap-2 picks red">
+      @for (step of picksRed(); track $index) {
+        <div class="pick red rounded position-relative"
+          [class.placeholder]="step?.championId == null"
+          [class.pending]="step?.pending && isPending()">
+          @if (step?.championId != null) {
+            <img
+              [src]="imgSplash(step?.championId ?? null)"
+              class="rounded champion-image"
+              [class.placeholder]="step?.championId == null"
+              [class.pending]="step?.pending && isPending()"
+              alt="Champion"
+              title="Champion"
+            />
+            <span class="badge bg-black text-white p-2 position-absolute bottom-0 end-0 z-1">
+              {{ '' }}
+            </span>
+          }  
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+

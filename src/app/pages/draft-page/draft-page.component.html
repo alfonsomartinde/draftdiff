@@ -1,0 +1,33 @@
+<app-picks-bans-panel
+  [imageById]="imageById()"
+  [champions]="championsItems()"
+  [usedIds]="usedIds()"
+  (pickedChampion)="pickedChampion($event)"
+  [disableGrid]="disableGrid()"
+/>
+
+<div class="row">
+  <div class="col-12 d-flex justify-content-center">
+    @if (isReady()) {
+      <button
+        type="button"
+        class="btn antonio-700 px-4 py-2"
+        (click)="confirmSelection()"
+        [disabled]="!confirmable()"
+        [class.btn-secondary]="!confirmable()"
+        [class.btn-warning]="confirmable()"  
+      >
+        {{ confirmable() ? 'Confirmar' : isFinished() ? 'Finalizado' : 'Esperando...' }}
+      </button>
+    } @else {
+      <button 
+        type="button" 
+        class="btn btn-warning antonio-700 px-4 py-2" 
+        (click)="ready()" 
+        [disabled]="isReady()"
+        >
+        Ready
+      </button>
+    }
+  </div>
+</div>

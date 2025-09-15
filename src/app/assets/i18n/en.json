@@ -1,0 +1,10 @@
+{
+  "title": "Room: {{room}} · {{side}}",
+  "start": "Start",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "bansBlue": "Blue Bans",
+  "bansRed": "Red Bans",
+  "picksBlue": "Blue Picks",
+  "picksRed": "Red Picks"
+}

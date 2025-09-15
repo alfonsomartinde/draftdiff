@@ -1,0 +1,53 @@
+.grayscale {
+  filter: grayscale(100%);
+}
+
+.diag {
+  height: 5px;
+  width: 100%;
+  background-color: red;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  transform: rotate(45deg);
+}
+.diag.diag-1 {
+  transform: translate3d(-50%, -50%, 0) rotate(45deg);
+}
+.diag.diag-2 {
+  transform: translate3d(-50%, -50%, 0) rotate(-45deg);
+}
+
+.champions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+  height: 18rem;
+
+  /* Bootstrap-like breakpoints without importing the whole framework */
+  @media (min-width: 576px) { /* sm */
+    grid-template-columns: repeat(4, 1fr);
+    height: 19rem;
+  }
+
+  @media (min-width: 768px) { /* md */
+    grid-template-columns: repeat(5, 1fr);
+    height: 25rem;
+  }
+
+  @media (min-width: 992px) { /* lg */
+    grid-template-columns: repeat(6, 1fr);
+    height: 34rem;
+  }
+
+  @media (min-width: 1200px) { /* xl */
+    grid-template-columns: repeat(8, 1fr);
+    height: 42rem;
+  }
+
+  @media (min-width: 1400px) { /* xxl */
+    grid-template-columns: repeat(10, 1fr);
+    height: 48rem;
+  }
+}

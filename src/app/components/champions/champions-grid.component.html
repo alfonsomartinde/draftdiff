@@ -1,0 +1,42 @@
+@if (!isSpec()) {
+  <div class="mb-2 d-flex align-items-center gap-2">
+    <div class="input-group mb-3">
+      <input
+        class="form-control"
+        placeholder="Buscar campeón"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+      />    
+      <button class="btn btn-outline-secondary" type="button" title="Clear" (click)="clear($event)" id="button-addon2">Clear</button>
+    </div>
+  </div>
+}
+
+<div class="champions overflow-y-auto">
+  @for (c of filtered(); track c.id) {
+    <div class="champion">
+      <button
+        type="button"
+        class="btn p-0 w-100 border-0 overflow-hidden position-relative"
+        (click)="emitSelectedChampionEvent(c, $event)"
+        [disabled]="usedIds()?.has(c.id) || disabled()"
+        [attr.aria-label]="c.name || 'Champion'"
+        [attr.title]="c.name || 'Champion'"
+        [class.disabled]="disabled()"
+      >
+        @if (usedIds()?.has(c.id)) {
+          <div class="diag diag-2"></div>
+        }
+        <img
+          [src]="c.squareImage"
+          class="img-fluid rounded"
+          [alt]="c.name || 'Champion'"
+          [class.grayscale]="usedIds()?.has(c.id)"
+          [class.pending]="isPending()"
+          aria-hidden="true"
+        />
+        <span class="visually-hidden">{{ c.name || 'Champion' }}</span>
+      </button>
+    </div>
+  }
+</div>
