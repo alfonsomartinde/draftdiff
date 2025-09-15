@@ -19,7 +19,7 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
-const DEFAULT_DEADLINE_SECONDS = 30; // 30 seconds
+const port = Number(process.env['PORT'] ?? 4000);
 
 /**
  * Example Express Rest API endpoints can be defined here.
@@ -105,7 +105,7 @@ const io = new Server(server, {
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
-      return list.length ? list : ['http://localhost:4200'];
+      return list.length ? list : [`	http://localhost:${port}`];
     })(),
   },
 });
@@ -153,32 +153,65 @@ io.on('connection', (socket) => {
     const room = eventsService.getRoom(roomId);
 
     if (!type) return;
-    if (!room.state) return;
-
-    const base = room.state;
-    const stepIdx = base.currentStepId;
-    const step = base.steps[stepIdx];
-    // noop: preserved for potential deep copy in future
-
-    if (!step) return;
+    // NOTE: For JOIN and PING we do not require room.state to exist
+    // For other events, ensure we have a valid state/step
+    const ensureStep = () => {
+      if (!room.state) return false;
+      const base = room.state;
+      const stepIdx = base.currentStepId;
+      const step = base.steps[stepIdx];
+      return !!step;
+    };
 
     switch (type) {
       case 'CLIENT/JOIN': {
         socket.join(roomId);
+        // Hydrate in-memory state from DB if missing
+        if (!room.state) {
+          try {
+            const conn = await databaseService.getConnection();
+            try {
+              const [rows] = await conn.query(
+                'SELECT state FROM rooms WHERE id=? LIMIT 1',
+                [roomId],
+              );
+              const row = Array.isArray(rows) ? (rows as any)[0] : undefined;
+              const raw = row?.state;
+              if (raw != null) {
+                let parsed: any;
+                if (typeof raw === 'string') {
+                  parsed = JSON.parse(raw);
+                } else if (Buffer.isBuffer(raw)) {
+                  parsed = JSON.parse(raw.toString('utf8'));
+                } else if (typeof raw === 'object') {
+                  parsed = raw; // already parsed by driver
+                }
+                if (parsed) {
+                  room.state = parsed as DraftState;
+                }
+              }
+            } finally {
+              conn.release();
+            }
+          } catch (e) {
+            console.error('[socket] hydrate state failed', e);
+          }
+        }
         eventsService.handleJoin(io, roomId);
         break;
       }
 
       // if type is PING
       case 'CLIENT/PING': {
-        io.to(roomId).emit('message', {
-          type: 'SERVER/PONG',
-        });
+        // Responder al emisor y a la sala por compatibilidad
+        socket.emit('message', { type: 'SERVER/PONG' });
+        io.to(roomId).emit('message', { type: 'SERVER/PONG' });
         break;
       }
 
       // if type is READY, payload: { side }
       case 'CLIENT/READY': {
+        if (!ensureStep()) return;
         console.log('CLIENT/READY received', payload);
         await eventsService.handleReady(io, roomId, room, payload);
         break;
@@ -186,6 +219,7 @@ io.on('connection', (socket) => {
 
       // if type is SELECT, payload: { side, action, championId }
       case 'CLIENT/SELECT': {
+        if (!ensureStep()) return;
         console.log('CLIENT/SELECT received', payload);
         await eventsService.handleSelect(io, roomId, room, payload);
         break;
@@ -193,6 +227,7 @@ io.on('connection', (socket) => {
 
       // if type is CONFIRM, payload: { side, action }
       case 'CLIENT/CONFIRM': {
+        if (!ensureStep()) return;
         console.log('CLIENT/CONFIRM received', payload);
         await eventsService.handleConfirm(io, roomId, room, payload);
         break;
@@ -200,6 +235,7 @@ io.on('connection', (socket) => {
 
       // if type is SET_TEAM_NAME, payload: { side, name }
       case 'CLIENT/SET_TEAM_NAME': {
+        if (!ensureStep()) return;
         console.log('CLIENT/SET_TEAM_NAME received', payload);
         await eventsService.handleSetTeamName(io, roomId, room, payload);
         break;
@@ -232,7 +268,6 @@ app.use((req, res, next) => {
  * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
  */
 if (isMainModule(import.meta.url)) {
-  const port = Number(process.env['PORT'] ?? 4000);
   server.listen(port, () => {
     console.log(`Node SSR + Socket.io listening on http://localhost:${port}`);
   });

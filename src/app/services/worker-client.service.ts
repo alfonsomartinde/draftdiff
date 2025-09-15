@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { DraftState, DraftType, UserSide } from '@models/draft';
+import { DraftType, UserSide } from '@models/draft';
 import { IPostMessage } from '@models/worker';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '@/environments/environment';
@@ -39,7 +39,7 @@ export class WorkerClientService {
   connect({ roomId }: { roomId: string }): void {
     if (this.socket) return;
     const url = this.getSocketUrl();
-    this.socket = io(url, { transports: ['websocket'], withCredentials: false });
+    this.socket = io(url, { transports: ['websocket', 'polling'], withCredentials: false });
     this.socket.on('connect_error', (e) => console.error('[socket] error', e));
     this.socket.on('message', (msg: any) => this.onSocketMessage(msg));
     this.join({ roomId });
@@ -47,15 +47,28 @@ export class WorkerClientService {
   }
 
   /**
+   * Disconnect from the worker and cleanup
+   */
+  disconnect(): void {
+    try {
+      this.socket?.removeAllListeners();
+      this.socket?.disconnect();
+    } catch {}
+    this.socket = undefined;
+  }
+
+  /**
    * Set the worker
    */
   // no-op, legacy
-  private setWorker(_workerUrl: string): void {}
+  private setWorker(_workerUrl: string): void {
+    // Legacy method intentionally left blank
+  }
 
   /**
    * On message
    */
-  private onSocketMessage = (msg: any): void => {
+  private readonly onSocketMessage = (msg: any): void => {
     if (!msg) {
       console.warn('CLIENT: EMPTY MESSAGE RECEIVED');
       return;

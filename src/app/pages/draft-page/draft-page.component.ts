@@ -100,9 +100,7 @@ export class DraftPageComponent {
   });
 
   protected readonly disableGrid = computed<boolean>(() => {
-    return (
-      this.isFinished() || !this.isMyTurn() || !this.hasStarted() || this.usedIds()?.size >= 20
-    );
+    return this.isFinished() || !this.isMyTurn() || !this.hasStarted();
   });
 
   protected readonly isReady = computed<boolean>(() => {

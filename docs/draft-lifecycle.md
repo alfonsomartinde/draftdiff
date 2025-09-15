@@ -533,3 +533,73 @@ El reductor NO realiza IO. Solo calcula `state` y una lista de `effects` a ejecu
 - Los campeones seleccionados en pasos previos no vuelven a estar disponibles
 
 
+
+---
+
+## Modo Espectador (Spec) y Reproducción Diferida
+
+Esta sección documenta el comportamiento específico de la vista de espectador cuando se reproduce un draft ya finalizado (modo diferido) y las reglas de control de la reproducción.
+
+### Carga inicial y enmascarado (deferred masking)
+
+- Al entrar en `spec` se captura el primer `SERVER/STATE` recibido tras `CLIENT/JOIN`.
+- Solo si ese estado inicial ya tiene `isFinished = true` y existen `events`, se activa el enmascarado diferido:
+  - Se reconstruye un estado base donde:
+    - Se conservan `roomId` y nombres de equipo
+    - `steps` vuelven a su forma inicial (pendiente el primer paso, sin `championId`)
+    - `currentStepId = 0`, `currentSide = 'blue'`, `countdown = 30`
+    - `isFinished = true` (para indicar vista finalizada mientras se enmascara)
+  - El objetivo es ocultar picks/bans hasta que el espectador inicie la reproducción.
+- Si el draft pasa a `isFinished=true` mientras un usuario está viendo “en directo”, NO se enmascara ni se resetea la UI del espectador. El enmascarado solo aplica si la página se cargó ya finalizada.
+
+### Condición para habilitar reproducción
+
+- La reproducción en `spec` solo está disponible si:
+  - El estado inicial en la carga tenía `isFinished = true` (deferred), y
+  - Existen eventos en `state.events`.
+
+### Controles de reproducción en `spec`
+
+- Botones visibles:
+  - Botón 1: "Empezar" / "Detener" / "Continuar"
+    - "Empezar": cuando no hay reproducción en curso y no hay progreso anterior
+    - "Detener": cuando la reproducción está en marcha
+    - "Continuar": cuando está pausada con progreso previo
+  - Botón 2: "Reiniciar"
+    - Vuelve al principio (estado base enmascarado) y NO auto-inicia la reproducción
+
+### Reanudación exacta y consistencia con `countdown`
+
+- La reproducción mantiene estado de runtime local:
+  - `replayIdx`: índice del siguiente evento a aplicar
+  - `replayCountdown`: segundo de `countdown` actual en la reproducción
+- Al pausar, se conservan ambos valores.
+- Al continuar, la reproducción retoma desde ese segundo. Si el siguiente evento tiene un `countdownAt` mayor que el `replayCountdown` (p. ej., pausado en 0 y el siguiente lote es a 30), se ajusta `replayCountdown` al `countdownAt` del próximo evento antes de reanudar para mantener coherencia temporal.
+
+### Sincronización del slider de historial
+
+- El componente `draft-history` acepta ahora entrada controlada desde el padre:
+  - Inputs: `controlled: boolean`, `currentIndex: number`
+  - En modo controlado, el slider refleja `currentIndex` y se ignora la interacción del usuario.
+  - Durante reproducción, el padre actualiza `currentIndex` conforme se aplican eventos (desplazando el indicador). Al pausar, se libera el control y el usuario puede mover el slider manualmente.
+  - Al pulsar "Reiniciar", el slider salta al inicio (`-1`).
+
+### Conexión de Socket y fuente de la reproducción
+
+- En `spec` la reproducción es puramente local usando `state.events` ya presentes:
+  - Antes de iniciar la reproducción, el cliente se desconecta del socket para evitar que nuevos `SERVER/STATE/TICK` alteren el timeline reproducido.
+  - La UI reproduce los eventos de `state.events` aplicando las mismas acciones NgRx usadas en tiempo real (`draft/ready`, `draft/select`, `draft/confirm`, `draft/tick`).
+
+### Resumen de casos
+
+- Carga `spec` de una sala en curso (no finalizada):
+  - No hay enmascarado ni reproducción diferida
+  - Si la sala se finaliza mientras se observa, no se aplica enmascarado retroactivo
+- Carga `spec` de una sala finalizada con eventos:
+  - Enmascarado diferido activo hasta que el usuario pulse "Empezar"
+  - Controles: "Empezar/Detener/Continuar" y "Reiniciar"
+- Reglas de botones:
+  - "Empezar": inicia desde el punto actual (inicio si no hay progreso)
+  - "Detener": pausa, conservando `replayIdx` y `replayCountdown`
+  - "Continuar": reanuda desde el mismo segundo
+  - "Reiniciar": vuelve al principio y no inicia la reproducción por sí mismo
