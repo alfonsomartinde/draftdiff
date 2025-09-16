@@ -22,10 +22,11 @@
   </div>
 }
 
-<!-- Draft history slider at the bottom, full width -->
-<div class="row mt-3">
-  <div class="col-12">
-    <app-draft-history [controlled]="isReplaying()" [currentIndex]="historyIndex()" />
+@if (isReplayMode()) {
+  <!-- Draft history slider at the bottom, full width -->
+  <div class="row mt-3">
+    <div class="col-12">
+      <app-draft-history [controlled]="isReplaying()" [currentIndex]="historyIndex()" />
+    </div>
   </div>
-  
-</div>
+}
