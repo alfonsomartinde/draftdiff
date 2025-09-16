@@ -9,7 +9,12 @@ type Queryable = {
 function createPool() {
   const url = process.env['DATABASE_URL'];
   if (url && url.trim().length > 0) {
-    return mysql.createPool(url);
+    return mysql.createPool({
+      uri: url,
+      waitForConnections: true,
+      connectionLimit: 10,
+      connectTimeout: 10_000,
+    } as any);
   }
   return mysql.createPool({
     host: process.env['DATABASE_HOST'] || process.env['DB_HOST'] || '127.0.0.1',
@@ -19,20 +24,52 @@ function createPool() {
     database: process.env['DATABASE_NAME'] || process.env['DB_NAME'] || 'drafter',
     waitForConnections: true,
     connectionLimit: 10,
+    connectTimeout: 10_000,
   });
+}
+
+function buildConfigSummary() {
+  const url = process.env['DATABASE_URL'];
+  if (url && url.trim().length > 0) {
+    return { mode: 'url', urlMasked: url.replace(/:\w+@/, ':***@') };
+  }
+  return {
+    mode: 'params',
+    host: process.env['DATABASE_HOST'] || process.env['DB_HOST'] || '127.0.0.1',
+    port: Number(process.env['DATABASE_PORT'] ?? process.env['DB_PORT'] ?? 3306),
+    user: (process.env['DATABASE_USER'] || process.env['DB_USER'] || 'root')?.slice(0, 3) + '***',
+    database: process.env['DATABASE_NAME'] || process.env['DB_NAME'] || 'drafter',
+    ssl: !!process.env['DATABASE_SSL'] || /ssl=/i.test(String(process.env['DATABASE_URL'] || '')),
+  };
 }
 
 export class DatabaseService {
   private static _instance: DatabaseService | null = null;
   private readonly pool: mysql.Pool;
+  private readonly configSummary: Record<string, any>;
 
   private constructor() {
+    this.configSummary = buildConfigSummary();
     this.pool = createPool();
+    this.attachPoolEventLogs();
   }
 
   static get instance(): DatabaseService {
     this._instance ??= new DatabaseService();
     return this._instance;
+  }
+
+  describeConfig(): Record<string, any> {
+    return this.configSummary;
+  }
+
+  private attachPoolEventLogs(): void {
+    const anyPool: any = this.pool as any;
+    if (anyPool?.on) {
+      anyPool.on('acquire', () => console.log('[DB] pool acquire'));
+      anyPool.on('release', () => console.log('[DB] pool release'));
+      anyPool.on('enqueue', () => console.warn('[DB] pool enqueue (waiting for available connection)'));
+    }
   }
 
   async getConnection() {

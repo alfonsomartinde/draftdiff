@@ -274,6 +274,7 @@ app.use(async (req, res, next) => {
 server.listen(port, async () => {
   console.log(`Node ${SSR_ENABLED ? 'SSR' : 'CSR'} + Socket.io listening on http://localhost:${port}`);
   try {
+    console.log('[DB] Config summary', databaseService.describeConfig());
     const res = await databaseService.checkConnectivity();
     if ((res as any).ok) {
       console.log('[DB] Ready');
