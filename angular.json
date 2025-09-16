@@ -23,7 +23,14 @@
             "prerender": false,
             "allowedCommonJsDependencies": [
               "debug",
-              "xmlhttprequest-ssl"
+              "xmlhttprequest-ssl",
+              "redis",
+              "@redis/client",
+              "@redis/bloom",
+              "@redis/graph",
+              "@redis/json",
+              "@redis/search",
+              "@redis/time-series"
             ],
             "fileReplacements": [
               {
