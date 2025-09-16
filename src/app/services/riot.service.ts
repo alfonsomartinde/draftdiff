@@ -5,22 +5,27 @@ import { ChampionDto, ChampionItem } from '@models/champion';
 export class RiotService {
   private readonly ddragonBase = 'https://ddragon.leagueoflegends.com/cdn';
   private readonly communityDragonBase = 'https://cdn.communitydragon.org/latest/champion';
-  private readonly versionsUrl = 'https://ddragon.leagueoflegends.com/api/versions.json';
+  // Use SSR proxy endpoints to benefit from Redis cache
+  private readonly latestVersionUrl = '/api/versions/latest';
+  private readonly championsUrl = '/api/champions';
   private readonly cache = new Map<string, unknown>();
 
   async getLatestVersion(): Promise<string> {
-    const versions = (await this.getJson<string[]>(this.versionsUrl)) ?? [];
-    if (!Array.isArray(versions) || versions.length === 0) {
-      throw new Error('Unable to resolve Data Dragon versions');
-    }
-    return versions[0];
+    const resp = (await this.getJson<{ version: string }>(this.latestVersionUrl)) ?? {
+      version: '',
+    };
+    if (!resp?.version) throw new Error('Unable to resolve Data Dragon versions');
+    return resp.version;
   }
 
   async getChampions(options?: { version?: string; locale?: string }): Promise<ChampionItem[]> {
     const version = options?.version ?? (await this.getLatestVersion());
     const locale = options?.locale ?? 'en_US';
-    const url = `${this.ddragonBase}/${version}/data/${locale}/champion.json`;
-    const data = (await this.getJson<any>(url)) ?? { data: {} };
+    const url = `${this.championsUrl}?version=${encodeURIComponent(version)}&locale=${encodeURIComponent(
+      locale,
+    )}`;
+    const resp = (await this.getJson<any>(url)) ?? { data: { data: {} } };
+    const data = resp?.data ?? { data: {} };
     const champions: ChampionItem[] = Object.values<ChampionDto>(data.data).map((c) => ({
       id: Number(c.key),
       name: c.id,

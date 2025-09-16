@@ -7,6 +7,7 @@
       [max]="total() - 1"
       [value]="controlled ? (currentIndex ?? index()) : index()"
       [step]="1"
+      [disabled]="controlled"
       (input)="setIndex(($any($event.target).valueAsNumber))"
     />
     <div class="d-flex justify-content-between small mt-1">

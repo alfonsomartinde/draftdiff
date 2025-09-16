@@ -9,6 +9,7 @@ import { IPostMessage } from '@models/worker';
 import { databaseService } from './server/db';
 import { eventsService } from './server/events';
 import { existsSync } from 'node:fs';
+import { handleChampions, handleLatestVersion } from './server/riot-proxy';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const defaultSsr = process.env['NODE_ENV'] === 'production' ? 'false' : 'true';
@@ -44,6 +45,10 @@ app.use(express.json());
 
 // Health
 app.get('/health', (_req, res) => res.json({ ok: true }));
+
+// --- Data Dragon proxy with Redis-backed cache ---
+app.get('/api/versions/latest', handleLatestVersion);
+app.get('/api/champions', handleChampions);
 
 // Crear room con estado inicial
 // Crea la sala persistiendo solo el registro de rooms
