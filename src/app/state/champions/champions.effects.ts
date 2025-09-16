@@ -3,8 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { ChampionsActions } from './champions.actions';
 import { RiotService } from '@services/riot.service';
 import { Store } from '@ngrx/store';
-import { selectChampionsItems, selectChampionsStatus } from './champions.selectors';
-import { catchError, switchMap, withLatestFrom } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 import { of } from 'rxjs';
 
 @Injectable()

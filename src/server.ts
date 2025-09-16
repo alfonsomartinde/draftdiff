@@ -44,6 +44,15 @@ app.use(express.json());
 
 // Health
 app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/health/db', async (_req, res) => {
+  try {
+    const summary = databaseService.describeConfig?.() ?? {};
+    const result = await databaseService.checkConnectivity();
+    res.json({ ok: (result as any).ok === true, summary, result });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
+  }
+});
 
 // Crear room con estado inicial
 // Crea la sala persistiendo solo el registro de rooms
