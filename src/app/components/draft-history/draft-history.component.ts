@@ -33,11 +33,22 @@ export class DraftHistoryComponent implements OnChanges {
   // Current slider position (index into events timeline). -1 means base state (before any event)
   protected readonly index = signal<number>(-1);
 
-  // Controlled mode: when true, parent drives the index and this component does not dispatch events
+  /**
+   * Controlled mode flag.
+   * When true, the parent component drives the current index and the slider is disabled.
+   * In controlled mode, user input is ignored and no events are dispatched from this component.
+   */
   @Input() controlled: boolean = false;
+  /**
+   * Current index provided by the parent when in controlled mode.
+   * Values: -1 for initial state, [0 .. events.length - 1] for applied events.
+   */
   @Input() currentIndex: number | null = null;
 
-  // Notify parent when user changes the slider index (only when not controlled)
+  /**
+   * Emits the selected index when the user scrubs the slider while not in controlled mode.
+   * The parent can use this to align replay pointers (idx and countdown) and resume from there.
+   */
   readonly indexChanged = output<number>();
 
   // Derived length
@@ -46,7 +57,7 @@ export class DraftHistoryComponent implements OnChanges {
     return Array.isArray(s?.events) ? s.events.length : 0;
   });
 
-  // When draft changes (e.g., navigation), reset slider to end if finished else -1
+  // When draft changes (e.g., navigation), keep index clamped to valid range
   constructor() {
     effect(() => {
       const s = this.draft();
@@ -67,7 +78,11 @@ export class DraftHistoryComponent implements OnChanges {
     }
   }
 
-  // Public API to set the index from template input
+  /**
+   * Handles user input from the slider. Applies the selected history deterministically
+   * and notifies the parent via `indexChanged` so the replay can resume from that point.
+   * Ignored when `controlled` is true.
+   */
   setIndex(value: number): void {
     if (this.controlled) return; // ignore user input while controlled by parent (playing)
     const s = this.draft();

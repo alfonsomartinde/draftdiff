@@ -1,6 +1,14 @@
+/**
+ * Cache service with optional Redis backend and memory fallback.
+ *
+ * In Render, process memory is ephemeral and per-instance. Using Redis allows
+ * sharing cache across replicas. When Redis is unavailable or not configured,
+ * we gracefully fall back to an in-process Map with optional TTL.
+ */
 // Lazy load redis to keep it optional and avoid type resolution issues at build time
 // Using 'any' to avoid a hard dependency on '@types/redis' at build time
 
+/** Simple TTL-aware in-memory cache used as a fallback. */
 class InMemoryCache {
   private readonly store = new Map<string, { value: string; expiresAt?: number }>();
 
@@ -24,11 +32,13 @@ class InMemoryCache {
   }
 }
 
+/** Facade providing get/set/del and JSON helpers with Redis-first strategy. */
 class CacheService {
   private redis: any | null = null;
   private readonly memory = new InMemoryCache();
   private connecting: Promise<void> | null = null;
 
+  /** Initialize Redis client lazily if a URL is configured. */
   private async ensureRedis(): Promise<void> {
     if (this.redis) return;
     if (this.connecting) return this.connecting;
@@ -55,6 +65,7 @@ class CacheService {
     this.connecting = null;
   }
 
+  /** Read a raw string value from Redis or memory fallback. */
   async get(key: string): Promise<string | null> {
     try {
       await this.ensureRedis();
@@ -70,6 +81,7 @@ class CacheService {
     return this.memory.get(key);
   }
 
+  /** Write a raw string value with optional TTL. */
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     try {
       await this.ensureRedis();
@@ -90,6 +102,7 @@ class CacheService {
     await this.memory.set(key, value, ttlSeconds);
   }
 
+  /** Delete a key from Redis and memory. */
   async del(key: string): Promise<void> {
     try {
       await this.ensureRedis();
@@ -105,6 +118,7 @@ class CacheService {
     await this.memory.del(key);
   }
 
+  /** Read and parse JSON value from cache. */
   async getJson<T = unknown>(key: string): Promise<T | null> {
     const raw = await this.get(key);
     if (!raw) return null;
@@ -115,6 +129,7 @@ class CacheService {
     }
   }
 
+  /** Stringify and store JSON value with optional TTL. */
   async setJson(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
     const raw = JSON.stringify(value);
     await this.set(key, raw, ttlSeconds);

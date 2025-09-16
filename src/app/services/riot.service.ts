@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
 import { ChampionDto, ChampionItem } from '@models/champion';
 
+/**
+ * RiotService
+ *
+ * Client-side service to fetch champions and versions. In SSR/production we
+ * prefer hitting our own proxy endpoints (`/api/versions/latest`, `/api/champions`)
+ * which are Redis-backed to ensure stability and performance across replicas.
+ */
 @Injectable({ providedIn: 'root' })
 export class RiotService {
   private readonly ddragonBase = 'https://ddragon.leagueoflegends.com/cdn';
@@ -10,6 +17,7 @@ export class RiotService {
   private readonly championsUrl = '/api/champions';
   private readonly cache = new Map<string, unknown>();
 
+  /** Resolve latest DDragon version via SSR proxy. */
   async getLatestVersion(): Promise<string> {
     const resp = (await this.getJson<{ version: string }>(this.latestVersionUrl)) ?? {
       version: '',
@@ -18,6 +26,10 @@ export class RiotService {
     return resp.version;
   }
 
+  /**
+   * Fetch champions for a given version and locale.
+   * Maps DDragon DTOs into `ChampionItem` with normalized fields and URLs.
+   */
   async getChampions(options?: { version?: string; locale?: string }): Promise<ChampionItem[]> {
     const version = options?.version ?? (await this.getLatestVersion());
     const locale = options?.locale ?? 'en_US';
@@ -41,6 +53,7 @@ export class RiotService {
     this.cache.clear();
   }
 
+  /** Small fetch + JSON wrapper with in-memory request cache for the session. */
   private async getJson<T>(url: string): Promise<T | undefined> {
     if (this.cache.has(url)) return this.cache.get(url) as T;
     const res = await fetch(url, { cache: 'force-cache' });

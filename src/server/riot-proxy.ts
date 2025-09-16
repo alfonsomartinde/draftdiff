@@ -1,14 +1,23 @@
+/**
+ * Riot proxy and caching layer
+ *
+ * Acts as a server-side proxy for Data Dragon endpoints, providing a Redis-backed
+ * cache (with memory fallback) and stable SSR-friendly responses. Keys are versioned
+ * to allow straightforward invalidation when DDragon publishes a new version.
+ */
 import type { Request, Response } from 'express';
 import { cacheService } from './cache';
 
 const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com';
 
+/** Fetch JSON with basic error handling. */
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
   return (await res.json()) as T;
 }
 
+/** Resolve and cache the latest DDragon version for a short TTL (5 min). */
 export async function getLatestVersion(): Promise<string> {
   const cacheKey = 'ddragon:versions:latest';
   const cached = await cacheService.get(cacheKey);
@@ -21,6 +30,7 @@ export async function getLatestVersion(): Promise<string> {
   return latest;
 }
 
+/** Express handler returning `{ version }` for the latest DDragon version. */
 export async function handleLatestVersion(_req: Request, res: Response) {
   try {
     const v = await getLatestVersion();
@@ -31,6 +41,11 @@ export async function handleLatestVersion(_req: Request, res: Response) {
   }
 }
 
+/**
+ * Express handler returning champion.json (proxied) with caching by `version/locale`.
+ * - Cache HIT: respond from Redis/memory
+ * - Cache MISS: fetch from DDragon and store for a long TTL (7 days)
+ */
 export async function handleChampions(req: Request, res: Response) {
   try {
     const qLocale = req.query['locale'];

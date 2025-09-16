@@ -4,6 +4,13 @@ import { IStep } from '@models/draft';
 import { ChampionItem } from '@models/champion';
 import { ChampionsGridComponent } from '@components/champions/champions-grid.component';
 
+/**
+ * PicksPanelComponent
+ *
+ * Visualizes the five picks per team and hosts the champions grid. It exposes
+ * a `nameById` computed mapper to render champion names efficiently from the
+ * provided `champions` input, avoiding repeated array scans in the template.
+ */
 @Component({
   selector: 'app-picks-panel',
   standalone: true,
@@ -23,6 +30,13 @@ export class PicksPanelComponent {
     input<Record<number, { splashImage: string; squareImage: string; loadingImage: string }>>();
   readonly pickedChampion = output<ChampionItem>();
 
+  /**
+   * Returns a function that maps champion id -> name, pre-indexed from the
+   * current `champions()` input. Example:
+   * ```ts
+   * const name = this.nameById()(12); // "Aatrox"
+   * ```
+   */
   // Returns a function to get champion name by id using current champions input
   readonly nameById = computed<(id: number | null) => string>(() => {
     const list = this.champions() ?? [];
@@ -34,6 +48,7 @@ export class PicksPanelComponent {
     };
   });
 
+  /** Resolve splash image URL for a champion id or return a 1x1 placeholder. */
   imgSplash = (id: number | null): string => {
     if (id == null) return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     const image = this.imageById()?.[id];
