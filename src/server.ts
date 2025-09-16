@@ -271,8 +271,18 @@ app.use(async (req, res, next) => {
 });
 
 // Start server unconditionally
-server.listen(port, () => {
+server.listen(port, async () => {
   console.log(`Node ${SSR_ENABLED ? 'SSR' : 'CSR'} + Socket.io listening on http://localhost:${port}`);
+  try {
+    const res = await databaseService.checkConnectivity();
+    if ((res as any).ok) {
+      console.log('[DB] Ready');
+    } else {
+      console.error('[DB] Not reachable', (res as any).error);
+    }
+  } catch (e) {
+    console.error('[DB] Connectivity check threw', e);
+  }
 });
 
 /**

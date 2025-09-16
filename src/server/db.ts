@@ -39,6 +39,33 @@ export class DatabaseService {
     return this.pool.getConnection();
   }
 
+  /**
+   * Performs a simple connectivity check and logs useful error metadata.
+   */
+  async checkConnectivity(): Promise<{ ok: true } | { ok: false; error: Record<string, any> }> {
+    try {
+      const conn = await this.getConnection();
+      try {
+        await conn.query('SELECT 1');
+      } finally {
+        conn.release();
+      }
+      console.log('[DB] Connectivity OK');
+      return { ok: true } as const;
+    } catch (e: any) {
+      const meta: Record<string, any> = {
+        code: e?.code,
+        errno: e?.errno,
+        address: e?.address,
+        port: e?.port,
+        fatal: e?.fatal,
+        message: e?.message,
+      };
+      console.error('[DB] Connectivity FAILED', meta);
+      return { ok: false, error: meta } as const;
+    }
+  }
+
   private async checkRoomExistsInternal(dbLike: Queryable, id: string): Promise<boolean> {
     try {
       const [rows] = await dbLike.query('SELECT 1 FROM rooms WHERE id=? LIMIT 1', [id]);
