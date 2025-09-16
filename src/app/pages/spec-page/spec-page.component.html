@@ -1,24 +1,26 @@
-<app-picks-bans-panel [imageById]="imageById()" />
+<app-picks-bans-panel [imageById]="imageById()" [champions]="championsItems()" />
 
-<div class="row mt-3">
-  <div class="col-12 d-flex justify-content-center gap-2">
-    <button
-      type="button"
-      class="btn btn-primary antonio-700 px-4 py-2"
-      (click)="togglePlayback()"
-    >
-      {{ playPauseLabel() }}
-    </button>
-    <button
-      type="button"
-      class="btn btn-outline-secondary antonio-700 px-4 py-2"
-      (click)="restart()"
-    >
-      Reiniciar
-    </button>
+@if (isReplayMode()) {
+  <div class="row mt-3">
+    <div class="col-12 d-flex justify-content-center gap-2">
+      <button
+        type="button"
+        class="btn btn-primary antonio-700 px-4 py-2"
+        (click)="togglePlayback()"
+      >
+        {{ playPauseLabel() }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-outline-secondary antonio-700 px-4 py-2"
+        (click)="restart()"
+      >
+        Restart
+      </button>
+    </div>
+    
   </div>
-  
-</div>
+}
 
 <!-- Draft history slider at the bottom, full width -->
 <div class="row mt-3">

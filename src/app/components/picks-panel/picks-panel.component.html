@@ -15,7 +15,7 @@
               title="Champion"
             />
             <span class="badge bg-black text-white p-2 position-absolute bottom-0 start-0">
-              {{ '' }}
+              {{ nameById()(step?.championId ?? null) }}
             </span>
           }
         </div>
@@ -50,7 +50,7 @@
               title="Champion"
             />
             <span class="badge bg-black text-white p-2 position-absolute bottom-0 end-0 z-1">
-              {{ '' }}
+              {{ nameById()(step?.championId ?? null) }}
             </span>
           }  
         </div>

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, computed } from '@angular/core';
 import { IStep } from '@models/draft';
 import { ChampionItem } from '@models/champion';
 import { ChampionsGridComponent } from '@components/champions/champions-grid.component';
@@ -22,6 +22,17 @@ export class PicksPanelComponent {
   readonly imageById =
     input<Record<number, { splashImage: string; squareImage: string; loadingImage: string }>>();
   readonly pickedChampion = output<ChampionItem>();
+
+  // Returns a function to get champion name by id using current champions input
+  readonly nameById = computed<(id: number | null) => string>(() => {
+    const list = this.champions() ?? [];
+    const index = new Map<number, string>();
+    for (const c of list) index.set(c.id, c.name);
+    return (id: number | null): string => {
+      if (id == null) return '';
+      return index.get(id) ?? '';
+    };
+  });
 
   imgSplash = (id: number | null): string => {
     if (id == null) return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';

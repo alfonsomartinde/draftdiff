@@ -32,9 +32,11 @@ export class SpecPageComponent {
   private readonly store = inject(Store);
   private readonly client = inject(WorkerClientService);
   protected readonly roomId = signal<string>('');
+  
   // Draft state
   readonly draft = toSignal(this.store.select(selectDraft));
   readonly isFinished = toSignal(this.store.select(selectIsFinished), { initialValue: false });
+  
   // Replay controls: allowed when initial load was finished (deferred) and there are events
   protected readonly isReplayMode = computed<boolean>(() => {
     const s = this.draft();
@@ -44,14 +46,18 @@ export class SpecPageComponent {
   });
   protected readonly isReplaying = signal<boolean>(false);
   private readonly isMasked = signal<boolean>(false);
+ 
   // Track whether initial server state was already finished (deferred mode on load)
   private readonly hasCapturedInitial = signal<boolean>(false);
   private readonly initialWasFinished = signal<boolean>(false);
+  
   // Slider control from parent to child
   protected readonly historyIndex = signal<number>(-1);
+  
   // Persistent replay runtime state
   protected readonly replayIdx = signal<number>(0);
   protected readonly replayCountdown = signal<number>(30);
+  
   // Play/Pause label: Pause while playing, Continue if paused with progress, else Play
   protected readonly playPauseLabel = computed<string>(() => {
     if (this.isReplaying()) return 'Pause';
@@ -84,7 +90,7 @@ export class SpecPageComponent {
 
     // Set the title
     effect(() => {
-      this.title.setTitle(`Sportia Drafter - spec`);
+      this.title.setTitle(`Draft Diff - spec`);
     });
 
     // Connect to room to hydrate state via socket events
