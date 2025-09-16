@@ -12,7 +12,8 @@
     "prettier": "prettier --write \"src/**/*.ts\"",
     "test": "ng test",
     "dev:ssr": "concurrently -n BUILD,SERVER -c yellow,cyan \"npm:build:watch\" \"wait-on dist/draftdiff/server/server.mjs && node --watch dist/draftdiff/server/server.mjs\"",
-    "serve:ssr:draftdiff": "node dist/draftdiff/server/server.mjs"
+    "serve:ssr:draftdiff": "node dist/draftdiff/server/server.mjs",
+    "start:render": "cross-env SSR=false NODE_OPTIONS=--max-old-space-size=256 node dist/draftdiff/server/server.mjs"
   },
   "prettier": {
     "printWidth": 100,

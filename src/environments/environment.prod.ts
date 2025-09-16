@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  socketUrl: 'https://www.sportiariders.com/draftdiff',
+  socketUrl: 'https://draftdiff-aa3f0893ea56.herokuapp.com/',
 };

@@ -15,6 +15,8 @@ class EventsService {
   private static _instance: EventsService | null = null;
   private readonly DEFAULT_DEADLINE_SECONDS = 30;
   private readonly rooms = new Map<string, RoomRuntime>();
+  private readonly SWEEP_MS = 60_000;
+  private sweepTimer: NodeJS.Timeout | null = null;
 
   static get instance(): EventsService {
     this._instance ??= new EventsService();
@@ -24,6 +26,9 @@ class EventsService {
   getRoom(roomId: string): RoomRuntime {
     if (!this.rooms.has(roomId)) {
       this.rooms.set(roomId, { state: null, timer: null, deadlineMs: 0, started: false });
+    }
+    if (!this.sweepTimer) {
+      this.sweepTimer = setInterval(() => this.sweepIdleRooms(), this.SWEEP_MS);
     }
     return this.rooms.get(roomId)!;
   }
@@ -216,6 +221,20 @@ class EventsService {
       const handler = (handlers as any)[kind] as Function | undefined;
       if (!handler) continue;
       await handler({ room, roomId, io, hasPersist, effect });
+    }
+  }
+
+  private sweepIdleRooms(): void {
+    const now = Date.now();
+    for (const [roomId, room] of this.rooms.entries()) {
+      const isInactive = !room.started && !room.state;
+      const expiredTimer = room.deadlineMs && now - room.deadlineMs > 5 * 60_000; // 5 min
+      if (room.timer && (isInactive || expiredTimer)) {
+        clearInterval(room.timer);
+      }
+      if (isInactive || expiredTimer) {
+        this.rooms.delete(roomId);
+      }
     }
   }
 }
