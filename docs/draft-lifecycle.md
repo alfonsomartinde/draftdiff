@@ -215,6 +215,21 @@ Estado actualizado (runtime y, si hubo persist, también en DB)
 
 ---
 
+## Proxy SSR y caché con Redis (Data Dragon)
+
+- Endpoints del servidor:
+  - `GET /api/versions/latest` → devuelve `{ version }` del Data Dragon. Cacheado (TTL ~5m).
+  - `GET /api/champions?version={v}&locale={l}` → proxya `champion.json` de DDragon y lo cachea por clave `champions:{version}:{locale}` (TTL largo; invalidación al cambiar versión).
+- Beneficios:
+  - Menor latencia y mayor estabilidad en SSR (sin depender de terceros en render).
+  - Caché compartida entre réplicas en Render.
+  - Control de cabeceras (`Cache-Control`, `s-maxage`) y futura compatibilidad con ETag/304.
+- Cliente (`RiotService`):
+  - Consume los endpoints SSR; si la versión no cambia, usa datos cacheados.
+  - Si cambia, refresca y persiste la nueva versión y lista de campeones.
+
+---
+
 ## Ejemplos de snapshots de estado (DraftState)
 
 A continuación se muestran snapshots JSON ilustrativos del `DraftState` en momentos clave. Estos objetos son los que se guardan dentro de `rooms.state`.
@@ -439,7 +454,7 @@ Terminología:
 ### 3) Ambos READY, inicio de paso (turno del lado actual)
 
 - Lado en turno (coincide con `state.currentSide` y `steps[currentStepId].pending === true`):
-  - Botón: "Confirmar"
+  - Botón: "Confirm"
   - Estado del botón: Disabled hasta que haya una selección válida (`championId != null`)
   - Grid de campeones: Enabled
     - Campeones ya pickeados o baneados en pasos previos: Disabled + en blanco y negro + tooltip "Unavailable"
@@ -447,7 +462,7 @@ Terminología:
     - Campeón seleccionado actualmente: Highlight (borde/overlay). Se puede cambiar antes de confirmar
   - Acción al pulsar confirmar: emite `CLIENT/CONFIRM { side, action }`
 - Lado no en turno:
-  - Botón: "Esperando..." (Disabled)
+  - Botón: "Waiting..." (Disabled)
   - Grid: Disabled
 - Componente de bans:
   - Muestra los bans ya aplicados
@@ -458,7 +473,7 @@ Terminología:
 
 - Lado en turno puede cambiar la selección libremente:
   - Grid: Enabled; seleccionar otro campeón reemplaza `championId` local y emite `CLIENT/SELECT { side, action, championId }`
-  - Botón Confirmar: Enabled solo si hay `championId`
+  - Botón "Confirm": Enabled solo si hay `championId`
 - Campeones ya usados (pick o ban previos): Disabled + gris + tooltip
 - Timer: Decrece; al llegar a 0 el servidor auto-confirma el paso con el `championId` actual (puede ser `null` si no hubo selección)
 
@@ -481,7 +496,7 @@ Terminología:
 
 ### 7) Draft finalizado (`isFinished = true`)
 
-- Botón principal: Texto "Finalizado" (Disabled)
+- Botón principal: Texto "Finished" (Disabled)
 - Grid de campeones: Disabled completo
 - Campeones: todos en su estado final (usados: Disabled + gris; no usados: a color pero Disabled)
 - Componente de bans: solo visualización final
@@ -491,9 +506,9 @@ Terminología:
 
 ## Estados de UI resumidos por rol
 
-- Si `isFinished` → todo Disabled, botón "Finalizado".
-- Si NO es tu turno o el paso no está `pending` → botón "Esperando...", grid Disabled.
-- Si es tu turno y el paso está `pending` → grid Enabled; botón "Confirmar" Enabled solo si hay selección válida.
+- Si `isFinished` → todo Disabled, botón "Finished".
+- Si NO es tu turno o el paso no está `pending` → botón "Waiting...", grid Disabled.
+- Si es tu turno y el paso está `pending` → grid Enabled; botón "Confirm" Enabled solo si hay selección válida.
 - En lobby (antes de ambos READY) → botón "Ready" Enabled (si no lo has pulsado), grid Disabled.
 
 ---
@@ -610,6 +625,10 @@ Esta sección documenta el comportamiento específico de la vista de espectador 
   - `replayCountdown`: segundo de `countdown` actual en la reproducción
 - Al pausar, se conservan ambos valores.
 - Al continuar, la reproducción retoma desde ese segundo. Si el siguiente evento tiene un `countdownAt` mayor que el `replayCountdown` (p. ej., pausado en 0 y el siguiente lote es a 30), se ajusta `replayCountdown` al `countdownAt` del próximo evento antes de reanudar para mantener coherencia temporal.
+
+#### Reanudación desde el slider
+- Si el usuario mueve el slider a un evento pasado/futuro (incluso muy por delante) mientras está pausado, al pulsar "Continue" la reproducción se reanuda exactamente desde ese evento seleccionado.
+- El slider queda Disabled durante la reproducción y habilitado cuando está pausado.
 
 ### Sincronización del slider de historial
 
