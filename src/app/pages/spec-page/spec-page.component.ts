@@ -52,14 +52,14 @@ export class SpecPageComponent {
   // Persistent replay runtime state
   protected readonly replayIdx = signal<number>(0);
   protected readonly replayCountdown = signal<number>(30);
-  // Play/Pause label: Detener while playing, Continuar if paused with progress, else Empezar
+  // Play/Pause label: Pause while playing, Continue if paused with progress, else Play
   protected readonly playPauseLabel = computed<string>(() => {
-    if (this.isReplaying()) return 'Detener';
+    if (this.isReplaying()) return 'Pause';
     const s = this.draft();
     const total = Array.isArray(s?.events) ? s.events.length : 0;
     const finished = this.replayIdx() >= total && this.replayCountdown() <= 0;
-    if (finished) return 'Empezar';
-    return this.replayIdx() > 0 || this.replayCountdown() < 30 ? 'Continuar' : 'Empezar';
+    if (finished) return 'Play';
+    return this.replayIdx() > 0 || this.replayCountdown() < 30 ? 'Continue' : 'Play';
   });
   private replayTimer: any = null;
 

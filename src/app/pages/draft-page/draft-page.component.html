@@ -17,7 +17,7 @@
         [class.btn-secondary]="!confirmable()"
         [class.btn-warning]="confirmable()"  
       >
-        {{ confirmable() ? 'Confirmar' : isFinished() ? 'Finalizado' : 'Esperando...' }}
+        {{ confirmable() ? 'Confirm' : isFinished() ? 'Finished' : 'Waiting...' }}
       </button>
     } @else {
       <button 

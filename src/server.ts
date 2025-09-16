@@ -44,15 +44,6 @@ app.use(express.json());
 
 // Health
 app.get('/health', (_req, res) => res.json({ ok: true }));
-app.get('/health/db', async (_req, res) => {
-  try {
-    const summary = databaseService.describeConfig?.() ?? {};
-    const result = await databaseService.checkConnectivity();
-    res.json({ ok: (result as any).ok === true, summary, result });
-  } catch (e: any) {
-    res.status(500).json({ ok: false, error: e?.message || String(e) });
-  }
-});
 
 // Crear room con estado inicial
 // Crea la sala persistiendo solo el registro de rooms
@@ -280,19 +271,8 @@ app.use(async (req, res, next) => {
 });
 
 // Start server unconditionally
-server.listen(port, async () => {
+server.listen(port, () => {
   console.log(`Node ${SSR_ENABLED ? 'SSR' : 'CSR'} + Socket.io listening on http://localhost:${port}`);
-  try {
-    console.log('[DB] Config summary', databaseService.describeConfig());
-    const res = await databaseService.checkConnectivity();
-    if ((res as any).ok) {
-      console.log('[DB] Ready');
-    } else {
-      console.error('[DB] Not reachable', (res as any).error);
-    }
-  } catch (e) {
-    console.error('[DB] Connectivity check threw', e);
-  }
 });
 
 /**

@@ -119,15 +119,6 @@ export class DraftPageComponent {
   readonly confirmable = computed<boolean>(() => {
     if (!this.roomId()) return false;
     if (this.disableGrid()) return false;
-    console.log(
-      'confirmable?',
-      'roomId',
-      this.roomId(),
-      'disableGrid',
-      this.disableGrid(),
-      'isPending',
-      this.isPending(),
-    );
     return this.isPending();
   });
 
@@ -150,7 +141,7 @@ export class DraftPageComponent {
     // Set the title
     effect(() => {
       if (this.roomId()) {
-        this.title.setTitle(`Sportia Drafter - ${this.mySide()}`);
+        this.title.setTitle(`Draft Diff - ${this.mySide()}`);
       }
     });
 

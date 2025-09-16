@@ -596,11 +596,11 @@ Esta sección documenta el comportamiento específico de la vista de espectador 
 ### Controles de reproducción en `spec`
 
 - Botones visibles:
-  - Botón 1: "Empezar" / "Detener" / "Continuar"
-    - "Empezar": cuando no hay reproducción en curso y no hay progreso anterior
-    - "Detener": cuando la reproducción está en marcha
-    - "Continuar": cuando está pausada con progreso previo
-  - Botón 2: "Reiniciar"
+  - Botón 1: "Play" / "Pause" / "Continue"
+    - "Play": cuando no hay reproducción en curso y no hay progreso anterior
+    - "Pause": cuando la reproducción está en marcha
+    - "Continue": cuando está pausada con progreso previo
+  - Botón 2: "Restart"
     - Vuelve al principio (estado base enmascarado) y NO auto-inicia la reproducción
 
 ### Reanudación exacta y consistencia con `countdown`
@@ -617,7 +617,7 @@ Esta sección documenta el comportamiento específico de la vista de espectador 
   - Inputs: `controlled: boolean`, `currentIndex: number`
   - En modo controlado, el slider refleja `currentIndex` y se ignora la interacción del usuario.
   - Durante reproducción, el padre actualiza `currentIndex` conforme se aplican eventos (desplazando el indicador). Al pausar, se libera el control y el usuario puede mover el slider manualmente.
-  - Al pulsar "Reiniciar", el slider salta al inicio (`-1`).
+  - Al pulsar "Restart", el slider salta al inicio (`-1`).
 
 ### Conexión de Socket y fuente de la reproducción
 
@@ -631,10 +631,10 @@ Esta sección documenta el comportamiento específico de la vista de espectador 
   - No hay enmascarado ni reproducción diferida
   - Si la sala se finaliza mientras se observa, no se aplica enmascarado retroactivo
 - Carga `spec` de una sala finalizada con eventos:
-  - Enmascarado diferido activo hasta que el usuario pulse "Empezar"
-  - Controles: "Empezar/Detener/Continuar" y "Reiniciar"
+  - Enmascarado diferido activo hasta que el usuario pulse "Play"
+  - Controles: "Play/Pause/Continue" y "Restart"
 - Reglas de botones:
-  - "Empezar": inicia desde el punto actual (inicio si no hay progreso)
-  - "Detener": pausa, conservando `replayIdx` y `replayCountdown`
-  - "Continuar": reanuda desde el mismo segundo
-  - "Reiniciar": vuelve al principio y no inicia la reproducción por sí mismo
+  - "Play": inicia desde el punto actual (inicio si no hay progreso)
+  - "Pause": pausa, conservando `replayIdx` y `replayCountdown`
+  - "Continue": reanuda desde el mismo segundo
+  - "Restart": vuelve al principio y no inicia la reproducción por sí mismo
