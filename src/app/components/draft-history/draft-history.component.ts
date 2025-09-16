@@ -8,6 +8,7 @@ import {
   Input,
   OnChanges,
   SimpleChanges,
+  output,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -35,6 +36,9 @@ export class DraftHistoryComponent implements OnChanges {
   // Controlled mode: when true, parent drives the index and this component does not dispatch events
   @Input() controlled: boolean = false;
   @Input() currentIndex: number | null = null;
+
+  // Notify parent when user changes the slider index (only when not controlled)
+  readonly indexChanged = output<number>();
 
   // Derived length
   protected readonly total = computed<number>(() => {
@@ -76,6 +80,8 @@ export class DraftHistoryComponent implements OnChanges {
     if (clamped === this.index()) return;
     this.index.set(clamped);
     this.applyUpToIndex(clamped);
+    // Emit selected index so parent can align replay position
+    this.indexChanged.emit(clamped);
   }
 
   // Apply events deterministically from initial masked state up to given index

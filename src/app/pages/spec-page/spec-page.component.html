@@ -26,7 +26,11 @@
   <!-- Draft history slider at the bottom, full width -->
   <div class="row mt-3">
     <div class="col-12">
-      <app-draft-history [controlled]="isReplaying()" [currentIndex]="historyIndex()" />
+      <app-draft-history
+        [controlled]="isReplaying()"
+        [currentIndex]="historyIndex()"
+        (indexChanged)="onHistoryIndexChanged($event)"
+      />
     </div>
   </div>
 }

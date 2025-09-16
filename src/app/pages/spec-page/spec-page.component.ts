@@ -143,6 +143,25 @@ export class SpecPageComponent {
     });
   }
 
+  // When user scrubs the history slider while paused, align replay pointers
+  onHistoryIndexChanged(index: number): void {
+    // Reflect selected slider index
+    this.historyIndex.set(index);
+    const s = this.draft();
+    const events = s && Array.isArray(s.events) ? s.events : [];
+    // Next event to apply is one after the selected index; if -1, start from 0
+    const nextIdx = Math.max(0, (index ?? -1) + 1);
+    this.replayIdx.set(nextIdx);
+    if (nextIdx >= events.length) {
+      // At or beyond last event: set countdown to 0 to indicate finished
+      this.replayCountdown.set(0);
+    } else {
+      // Set countdown to the next event's countdown value so resume starts from there
+      const nextEventCd = events[nextIdx]?.countdownAt ?? 30;
+      this.replayCountdown.set(nextEventCd);
+    }
+  }
+
   private stopReplayTimer(): void {
     if (this.replayTimer) {
       clearInterval(this.replayTimer);
