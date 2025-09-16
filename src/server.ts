@@ -8,6 +8,7 @@ import { createInitialDraftState, DraftState } from '@models/draft';
 import { IPostMessage } from '@models/worker';
 import { databaseService } from './server/db';
 import { eventsService } from './server/events';
+import { existsSync } from 'node:fs';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const defaultSsr = process.env['NODE_ENV'] === 'production' ? 'false' : 'true';
@@ -252,7 +253,10 @@ async function processSocketMessage(io: Server, socket: any, msg: IPostMessage):
 app.use(async (req, res, next) => {
   try {
     if (!SSR_ENABLED) {
-      return res.sendFile(join(browserDistFolder, 'index.html'));
+      const csrIndex = existsSync(join(browserDistFolder, 'index.csr.html'))
+        ? 'index.csr.html'
+        : 'index.html';
+      return res.sendFile(join(browserDistFolder, csrIndex));
     }
     if (!angularApp) {
       const ssr = await import('@angular/ssr/node');
