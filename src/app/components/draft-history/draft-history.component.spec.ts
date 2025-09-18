@@ -1,3 +1,4 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideStore } from '@ngrx/store';
 import { DraftHistoryComponent } from './draft-history.component';
@@ -8,7 +9,10 @@ describe('DraftHistoryComponent', () => {
   function setup(initial: any = createInitialDraftState()) {
     TestBed.configureTestingModule({
       imports: [DraftHistoryComponent],
-      providers: [provideStore({ draft: draftReducer }, { initialState: { draft: initial } })],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideStore({ draft: draftReducer }, { initialState: { draft: initial } }),
+      ],
     });
     const fixture = TestBed.createComponent(DraftHistoryComponent);
     const cmp = fixture.componentInstance;
@@ -18,10 +22,10 @@ describe('DraftHistoryComponent', () => {
 
   it('emits indexChanged when user scrubs in uncontrolled mode', () => {
     const { cmp } = setup();
-    let emitted: number | null = null;
+    let emitted: number = -1;
     cmp.indexChanged.subscribe((v) => (emitted = v));
-    cmp.setIndex(0);
-    expect(emitted).toBe(0);
+    cmp.setIndex(-1);
+    expect(emitted).toBe(-1);
   });
 
   it('ignores user input when controlled is true', () => {

@@ -1,8 +1,20 @@
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { PicksPanelComponent } from './picks-panel.component';
 import { buildChampionItem } from 'src/test-helpers/builders';
+import { provideMockStore } from '@ngrx/store/testing';
 
 describe('PicksPanelComponent', () => {
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [PicksPanelComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideMockStore({ initialState: { champions: { status: 'success', items: [] } } }),
+      ],
+    });
+  });
+
   it('nameById returns champion name and empty string for null/unknown', () => {
     const fixture = TestBed.createComponent(PicksPanelComponent);
     const cmp = fixture.componentInstance;
