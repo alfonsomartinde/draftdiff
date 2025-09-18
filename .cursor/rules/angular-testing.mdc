@@ -1,0 +1,194 @@
+---
+description: Angular testing rules for unit/integration with modern standalone components
+globs:
+  - "src/**/*.spec.ts"
+  - "src/app/**/*.ts"
+alwaysApply: false
+---
+# Cursor Rules — Angular Testing (Unit & Component)
+
+## Intent
+- Provide precise, project-agnostic rules for writing and maintaining Angular unit/component tests.
+- Align with Angular official testing guidance and industry best practices.
+- These rules are for an AI assistant editing code in Cursor. Follow them strictly.
+
+## Scope
+- Angular v16+ (standalone components), v17+, v18+, v20+ compatible.
+- Test runner: Karma + Jasmine (CLI default), but rules generally apply to other runners.
+
+## General Principles
+1) Deterministic tests only
+   - No real network, real timers, or flaky timing assumptions.
+   - Use HttpClientTesting APIs; never hit real endpoints.
+   - Prefer fakeAsync/tick or explicit event triggering over timeouts.
+
+2) Small, focused tests (AAA pattern)
+   - Arrange: set up TestBed and state.
+   - Act: trigger the behavior once.
+   - Assert: make minimal clear assertions.
+
+3) Naming & placement
+   - Spec filename mirrors SUT filename with .spec.ts extension.
+   - Place specs next to the source file they test.
+
+4) Code conventions for tests
+   - Test data, variable names, and code in English.
+   - Keep selectors stable (use data-* attributes or semantic structure when possible).
+   - Do not rely on localized strings for assertions when avoidable; prefer structure.
+
+## TestBed Configuration (Modern Angular)
+- For standalone components/services, import the component/service as needed in TestBed.
+- Use provideZonelessChangeDetection() for zoneless tests where possible.
+- HTTP:
+  - Provide both of these for HTTP tests:
+    - provideHttpClient()
+    - provideHttpClientTesting()
+  - Always assert HTTP method, URL, and flush responses via HttpTestingController.
+
+## Component Testing Rules
+- Creation
+  - Use TestBed.createComponent(MyComponent) and fixture.detectChanges() when needed.
+- Inputs
+  - Prefer fixture.componentRef.setInput('inputName', value) for @Input() and input() signal bindings.
+- Outputs & Events
+  - Trigger DOM events using dispatchEvent / click() on native elements.
+- Signals & Change Detection
+  - For signal-based components, set signals directly on the instance and call fixture.detectChanges() before assertions.
+- Asynchrony
+  - Prefer fakeAsync/tick for macro/microtask control. Use waitForAsync/fixture.whenStable() only if required.
+- Template Queries
+  - Query minimal DOM needed. Avoid brittle selectors. Validate structure/semantics over exact text when feasible.
+
+## Service Testing Rules
+- Instantiate via TestBed.inject(Service).
+- For HTTP-backed services, assert:
+  - One request per call, correct method and URL, typed response handling.
+  - All outstanding requests are verified: httpMock.verify().
+- Cover both success and error branches where meaningful.
+
+## HttpClientTestingController Patterns
+- Arrange: call service method to enqueue a request.
+- Expect: const req = httpMock.expectOne(expectedUrl); expect(req.request.method).toBe('GET'|'POST'|...)
+- Respond: req.flush(mockBody) or req.error(new ProgressEvent('error')).
+- Verify: httpMock.verify() in afterEach.
+
+## SSE (EventSource) Testing
+- Never open real EventSource in tests.
+- Provide a mock EventSource on window.EventSource and track created instances.
+- Expose hooks for onmessage/onerror and call them with synthetic events.
+- Ensure close() is called on teardown; do not leak instances.
+
+## Pipes & Directives
+- Pipes: instantiate class directly and test transform() with representative inputs, including edge cases (null/undefined).
+- Attribute directives: render a minimal host template, query DebugElement with By.directive, assert classes/styles/behavior.
+
+## Routing & Navigation
+- For router-dependent components, test template behavior and navigation triggers using RouterTestingModule or mock providers. Prefer component integration tests for simple routing.
+
+## Zoneless Guidance
+- If using provideZonelessChangeDetection(), avoid Zone.js assumptions. Prefer explicit change detection.
+
+## Standalone Components & Inputs API
+- For standalone components, import the component in TestBed.configureTestingModule({ imports: [Component] }).
+- For input() signals, prefer setInput and direct signal mutation on the instance.
+
+## Coverage Policy
+- Target minimum 80% for statements, branches, functions, and lines.
+- Enforce via karma-coverage configuration (coverageReporter.check.global ≥ 80%).
+- Use ng test --no-watch --code-coverage to generate reports.
+
+## CI Execution
+- Use: ng test --no-watch --no-progress --browsers=ChromeHeadless.
+- Treat warnings as non-blocking but fixable (e.g., missing expectations warnings) to avoid silent gaps.
+
+## Test Data & Utilities
+- Create src/test-helpers/ for:
+  - HTTP testing providers: a helper like provideHttpTesting() that returns [provideHttpClient(withInterceptorsFromDi()), provideHttpClientTesting()].
+  - Builders/factories for repeatable test data.
+  - DOM/query helpers.
+- Reuse helpers across specs; avoid duplication.
+
+## Anti-Patterns (Do NOT)
+- Do not perform real HTTP or SSE connections.
+- Do not sleep with setTimeout in tests; control time with fakeAsync/tick.
+- Do not assert on implementation details (private members) unless strictly necessary; prefer public API and visible behavior.
+- Do not anchor tests to fragile text content or CSS unless it’s the behavior under test.
+- Do not silence linter/type errors; fix them.
+
+## AI Editing Directives
+- Preserve file formatting and indentation; do not reformat unrelated code.
+- Keep edits minimal and atomic; one behavior per test.
+- Add missing imports/providers required by tests.
+- When introducing HTTP tests, always include HttpTestingController expectations and httpMock.verify() in afterEach.
+- Prefer stable selectors or structural assertions over localized strings; if text is asserted, scope narrowly.
+- When adding many tests, update/maintain coverage thresholds and CI scripts as needed.
+
+## Examples (Idiomatic Snippets)
+
+### HTTP service test
+```ts
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
+
+describe('MyService', () => {
+  let httpMock: HttpTestingController;
+  let svc: MyService;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()]
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+    svc = TestBed.inject(MyService);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('fetches data via GET', () => {
+    svc.getData().subscribe(res => expect(res).toEqual({ ok: true }));
+    const req = httpMock.expectOne('/api/data');
+    expect(req.request.method).toBe('GET');
+    req.flush({ ok: true });
+  });
+});
+```
+
+### Standalone component input test
+```ts
+import { TestBed } from '@angular/core/testing';
+
+it('renders input value', () => {
+  const fixture = TestBed.createComponent(MyStandaloneCmp);
+  fixture.componentRef.setInput('title', 'Hello');
+  fixture.detectChanges();
+  expect(fixture.nativeElement.textContent).toContain('Hello');
+});
+```
+
+### SSE mock pattern
+```ts
+class MockEventSource {
+  onmessage: ((ev: MessageEvent) => any) | null = null;
+  onerror: ((ev: Event) => any) | null = null;
+  constructor(public url: string) {}
+  close() {}
+}
+
+beforeEach(() => {
+  (window as any).EventSource = MockEventSource as any;
+});
+```
+
+## References
+- Angular Testing Guides: https://angular.dev/guide/testing
+- Code Coverage: https://angular.dev/guide/testing/code-coverage
+- Testing Attribute Directives: https://angular.dev/guide/testing/attribute-directives
+- Testing Pipes: https://angular.dev/guide/testing/pipes
+- Testing Utility APIs: https://angular.dev/guide/testing/utility-apis
+- Component Testing Scenarios: https://angular.dev/guide/testing/components-scenarios
+- Testing Services: https://angular.dev/guide/testing/services
+- Best practices articles:
+  - https://www.linkedin.com/pulse/mastering-unit-testing-angular-best-practices-rajat-malik-agzbc/
+  - https://javascript.plainenglish.io/mastering-angular-unit-testing-best-practices-and-tools-7591753681cb
+

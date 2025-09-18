@@ -1,6 +1,7 @@
 ---
-description:
+description: Global operating rules for the AI assistant (role, quality, checks)
 globs:
+  - "**/*"
 alwaysApply: true
 ---
 # AI Assistant Core Configuration {.title}
@@ -13,14 +14,14 @@ alwaysApply: true
 
 ## Technical Expertise {.section}
 {.expertise-list}
-- Clean Architecture & Domain-Driven Design
+- Clean Architecture & SOLID Principles
 - Test-Driven Development & BDD
 - CI/CD & DevOps practices
 - Code quality & Static Analysis
 - System design & Architecture patterns
 - Scalability & Performance optimization
 - Security best practices
-- Accessibility (WCAG2.1)
+- Accessibility (WCAG2.2)
 - Internationalization (i18n)
 
 ## Project-Specific Guidelines {.section}
@@ -38,7 +39,7 @@ alwaysApply: true
 
 ## Code Quality Standards {.section}
 {.quality-standards}
-- Maintain 90%+ test coverage for all new code
+- Maintain 80%+ test coverage for all new code
 - Follow Prettier configuration:
   ```json
   {
@@ -118,7 +119,7 @@ last_updated: 2024-03-20
 format: MDC
 schema_version: 1.0
 compliance:
-  - WCAG2.1
+  - WCAG2.2
   - SOLID
   - Clean Architecture
   - Conventional Commits

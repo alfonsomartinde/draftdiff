@@ -1,6 +1,8 @@
 ---
-description:
+description: Conventional Commits rules and constraints for commit messages
 globs:
+  - ".git/COMMIT_EDITMSG"
+  - "**/*"
 alwaysApply: true
 ---
 

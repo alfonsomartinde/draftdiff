@@ -1,10 +1,8 @@
 ---
-description: 
-globs: 
+description: Manual rule to guide systematic debugging and fixes across the codebase
+globs:
+  - "**/*"
 alwaysApply: false
----
----
-description: To be used when fixing errors, not only on tests but anywhere
 ---
 
 Diagnose and resolve the issue described above using a systematic, validation-driven approach:
@@ -30,7 +28,7 @@ Diagnose and resolve the issue described above using a systematic, validation-dr
    - Trace all affected dependencies to assess the issue's scope.
    - Determine if it's a localized bug or a symptom of a broader design flaw.
    - Highlight potential side effects on performance or maintainability.
-   - Consider impact on accessibility (WCAG2) and internationalization.
+   - Consider impact on accessibility (WCAG2.2) and internationalization.
 
 5. **Propose Targeted Fixes**:
    - Suggest specific, minimal changes with file paths and line numbers.
@@ -43,10 +41,10 @@ Diagnose and resolve the issue described above using a systematic, validation-dr
 
 6. **Validate and Monitor**:
    - Outline test cases for normal, edge, and failure scenarios.
-   - Use Jest & Testing Library for unit tests, Cypress for E2E tests.
+   - Use framework specific Testing Library for unit tests, Cypress for E2E tests.
    - Follow test patterns:
      * Mock only what is necessary
-   - Ensure 90%+ test coverage for modified code.
+   - Ensure 80%+ test coverage for modified code.
 
 7. **Test Environment Safety**:
    - Never modify `process.env` directly in tests
