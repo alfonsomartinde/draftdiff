@@ -67,7 +67,12 @@ export class SpecPageComponent {
     if (finished) return 'Play';
     return this.replayIdx() > 0 || this.replayCountdown() < 30 ? 'Continue' : 'Play';
   });
-  private replayTimer: any = null;
+  // Timers: countdown decrements each second; events scheduled with real deltas between their timestamps
+  private countdownTimer: any = null;
+  private nextEventTimer: any = null;
+  private nextEventDueAtMs: number = 0;
+  private remainingToNextMs: number = 0;
+  private lastAppliedEventAtMs: number = 0;
 
   // NgRx champions signals
   readonly championsStatus = toSignal(this.store.select(selectChampionsStatus), {
@@ -163,9 +168,13 @@ export class SpecPageComponent {
   }
 
   private stopReplayTimer(): void {
-    if (this.replayTimer) {
-      clearInterval(this.replayTimer);
-      this.replayTimer = null;
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+    if (this.nextEventTimer) {
+      clearTimeout(this.nextEventTimer);
+      this.nextEventTimer = null;
     }
     this.isReplaying.set(false);
   }
@@ -185,6 +194,11 @@ export class SpecPageComponent {
   // Toggle play/pause without resetting position/state
   togglePlayback(): void {
     if (this.isReplaying()) {
+      // Capture remaining ms to next scheduled event before stopping
+      if (this.nextEventTimer && this.nextEventDueAtMs > 0) {
+        const now = Date.now();
+        this.remainingToNextMs = Math.max(0, this.nextEventDueAtMs - now);
+      }
       this.stopReplayTimer();
       return;
     }
@@ -214,12 +228,11 @@ export class SpecPageComponent {
     this.isReplaying.set(true);
     const events = state.events;
 
-    // Apply any initial events at countdown 30 immediately
-    this.dispatchCountdownTick(this.replayCountdown());
-    this.applyPendingEventsAtCurrentCountdown(events);
+    // Initialize countdown loop (independent from event schedule)
+    this.beginCountdownInterval();
 
-    // Begin ticking loop
-    this.beginReplayInterval(events);
+    // Schedule next event based on real timestamp deltas
+    this.scheduleNextEvent(events);
   }
 
   private ensureSpecReplayReady(): void {
@@ -242,61 +255,77 @@ export class SpecPageComponent {
     }
   }
 
-  private applyPendingEventsAtCurrentCountdown(events: any[]): void {
-    // Apply all events recorded at the current countdown value.
-    // If a CONFIRM occurs, reset to 30 and immediately process events at 30 as well
-    // before allowing the interval to continue. This prevents missing events at 30.
-    let target = this.replayCountdown();
-    // Loop may handle multiple waves when target jumps to 30 after a confirm
-    // and there are immediate events at countdownAt=30.
-    while (this.replayIdx() < events.length) {
-      const idx = this.replayIdx();
-      if (events[idx].countdownAt !== target) break;
-      const ev = events[idx];
-      this.replayIdx.set(idx + 1);
-      this.applyEvent(ev);
-      // Update external slider index to reflect applied event
-      this.historyIndex.set(this.replayIdx() - 1);
-      if (ev.type === 'CLIENT/CONFIRM' || ev.type === 'CONFIRM') {
-        // Next step timer resets to 30 unless finished
-        this.replayCountdown.set(30);
-        target = this.replayCountdown();
-        this.dispatchCountdownTick(this.replayCountdown());
-        // continue loop to absorb any events that also happened at 30
-        // fallthrough to while condition without explicit continue
-      }
-    }
-  }
-
-  private beginReplayInterval(events: any[]): void {
-    this.replayTimer = setInterval(() => {
-      // Decrement countdown
+  private beginCountdownInterval(): void {
+    // Kick initial tick based on current replayCountdown
+    this.dispatchCountdownTick(this.replayCountdown());
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
+    this.countdownTimer = setInterval(() => {
+      // Decrement countdown independently of events
       const next = Math.max(0, this.replayCountdown() - 1);
       this.replayCountdown.set(next);
-      this.dispatchCountdownTick(this.replayCountdown());
-
-      // Apply events that occurred at this countdown value
-      this.applyPendingEventsAtCurrentCountdown(events);
-
-      // Stop if finished (no more events and countdown has reached 0)
-      if (this.replayIdx() >= events.length && this.replayCountdown() <= 0) {
-        clearInterval(this.replayTimer);
-        this.replayTimer = null;
-        this.isReplaying.set(false);
+      this.dispatchCountdownTick(next);
+      // If finished and no more events pending, stop timers
+      const s = this.draft();
+      const total = Array.isArray(s?.events) ? s!.events.length : 0;
+      if (this.replayIdx() >= total && next <= 0) {
+        this.stopReplayTimer();
       }
     }, 1000);
+  }
+
+  private scheduleNextEvent(events: any[]): void {
+    if (this.nextEventTimer) {
+      clearTimeout(this.nextEventTimer);
+      this.nextEventTimer = null;
+    }
+    const idx = this.replayIdx();
+    if (idx >= events.length) return;
+
+    // Compute delay to next event preserving original inter-event timing
+    const nextEvent = events[idx];
+    const nextAt = new Date(nextEvent.at).getTime();
+
+    let delayMs = 0;
+    if (this.remainingToNextMs > 0) {
+      // Resuming from pause
+      delayMs = this.remainingToNextMs;
+      this.remainingToNextMs = 0;
+    } else {
+      // If starting from an intermediate index without prior event applied,
+      // base delta on previous event timestamp; otherwise, use lastAppliedEventAtMs
+      const prevAt = idx > 0 ? new Date(events[idx - 1].at).getTime() : nextAt;
+      const base = this.lastAppliedEventAtMs > 0 ? this.lastAppliedEventAtMs : prevAt;
+      delayMs = Math.max(0, nextAt - base);
+    }
+
+    this.nextEventDueAtMs = Date.now() + delayMs;
+    this.nextEventTimer = setTimeout(() => {
+      // Apply the event
+      this.applyEvent(nextEvent as any);
+      this.historyIndex.set(idx); // reflect in slider
+
+      // Update pointers
+      this.replayIdx.set(idx + 1);
+      this.lastAppliedEventAtMs = nextAt;
+
+      // Special handling: after confirm, reset countdown to 30 (unless finished)
+      if (nextEvent.type === 'CLIENT/CONFIRM' || nextEvent.type === 'CONFIRM') {
+        const s = this.draft();
+        const finished = s?.isFinished;
+        if (!finished) {
+          this.replayCountdown.set(30);
+          this.dispatchCountdownTick(30);
+        }
+      }
+
+      // Schedule subsequent event
+      this.scheduleNextEvent(events);
+    }, delayMs);
   }
 
   private applyEvent(ev: import('@models/draft').DraftEvent): void {
     const roomId = this.roomId();
     if (!roomId || !ev || typeof ev.type !== 'string') return;
-    // Reflect countdown as captured at event time
-    const current = this.draft();
-    if (current) {
-      this.store.dispatch(
-        DraftActions['draft/tick']({ newState: withCountdown(current as any, ev.countdownAt) }),
-      );
-    }
     switch (ev.type) {
       case 'CLIENT/READY': {
         this.store.dispatch(DraftActions['draft/ready']({ roomId, side: ev.payload.side }));
