@@ -1,13 +1,9 @@
+@use 'styles/variables' as vars;
+
 @keyframes soft-blink {
-  0% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.85;
-  }
-  100% {
-    opacity: 1;
-  }
+  0% { opacity: 1; }
+  50% { opacity: 0.85; }
+  100% { opacity: 1; }
 }
 
 .picks {
@@ -42,36 +38,11 @@
   width: 100%;
 }
 
-.team-name {
-  font-size: 1.8rem;
-  line-height: 1;
-
-  &.blue {
-    text-align: left;
-    background: linear-gradient(90deg,rgba(0, 183, 255, 1) 50%, rgba(0, 183, 255, 0) 100%);  
-  }
-  
-  &.red {
-    text-align: right;
-    background: linear-gradient(270deg, rgb(255, 62, 62) 60%, rgba(65, 0, 0, 0.267) 100%); 
-  }
-
-  &.red, &.blue {
-    -webkit-transition: background 1s ease-in-out;
-    -ms-transition: background 1s ease-in-out;
-    transition: background 1s ease-in-out;
-  }
-}
-
 .countdown-wrapper {
   width: 11rem;
   text-align: center;
   background-color: RGBA(var(--bs-dark-rgb), var(--bs-bg-opacity, 1)) !important;
   border-radius: 0.5rem;
-}
-
-.panel-bans {
-  height: 4.1rem
 }
 
 .countdown {
@@ -80,51 +51,19 @@
   line-height: 1;
 }
 
-.bans {
-  width: 100%;
-  height: 4.1rem;
-
-  .ban {
-    width: 100%;
-  }
-
-  .champion-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &.blue {
-    justify-content: flex-start;
-  }
-
-  &.red {
-    justify-content: flex-end;
-  }
-}
 
 .pending {
-  animation: soft-blink 1.6s ease-in-out infinite;
-  border-bottom: 4px solid;
-
-  &.blue {
-    border-color: #007bff;
-  }
-
-  &.red {
-    border-color: #dc3545;
-  }
+  animation: soft-blink vars.$soft-blink-duration ease-in-out infinite;
+  border-bottom: vars.$border-thickness solid;
+  &.blue { border-color: vars.$brand-blue; }
+  &.red { border-color: vars.$brand-red; }
 }
+
+
 
 .placeholder {
   background-color: #f0f0f0;
-
-  &.pending {
-    background-color: #e0e0e0;
-  }
-
-  &.red, &.blue {
-    width: 100%;
-  }
+  &.pending { background-color: #e0e0e0; }
+  &.red, &.blue { width: 100%; }
 }
 

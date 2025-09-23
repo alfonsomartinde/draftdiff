@@ -1,0 +1,21 @@
+@use 'styles/variables' as vars;
+
+.team-name {
+  font-size: vars.$team-name-font-size;
+  line-height: 1;
+  width: 100%;
+
+  &.blue {
+    text-align: left;
+    background: linear-gradient(90deg, vars.$brand-blue 50%, rgba(0, 183, 255, 0) 100%);
+  }
+  &.red {
+    text-align: right;
+    background: linear-gradient(270deg, vars.$brand-red 60%, rgba(65, 0, 0, 0.267) 100%);
+  }
+  &.red, &.blue {
+    -webkit-transition: background 1s ease-in-out;
+    -ms-transition: background 1s ease-in-out;
+    transition: background 1s ease-in-out;
+  }
+}

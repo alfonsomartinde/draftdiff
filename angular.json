@@ -39,6 +39,10 @@
               }
             ],
             "stylePreprocessorOptions": {
+              "includePaths": [
+                "src",
+                "src/styles"
+              ],
               "sass": {
                 "silenceDeprecations": [
                   "import"

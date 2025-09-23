@@ -12,8 +12,8 @@ import { IStep, ITeam } from '@models/draft';
 import { ActivatedRoute } from '@angular/router';
 import { ChampionItem } from '@models/champion';
 // Removed direct grid usage; nested in PicksPanelComponent
-import { BansPanelComponent } from '../bans-panel/bans-panel.component';
-import { PicksPanelComponent } from '../picks-panel/picks-panel.component';
+import { BansPanelComponent } from '@components/picks-bans/bans-panel/bans-panel.component';
+import { PicksPanelComponent } from '@components/picks-bans/picks-panel/picks-panel.component';
 import { TimerComponent } from '@components/timer/timer.component';
 import { TeamNameComponent } from '@components/team-name/team-name.component';
 

@@ -31,23 +31,35 @@
   @if (roomId() && roomId() !== 'local') {
     <div class="mt-4">
       <h2 class="h5">Enlaces</h2>
-      <ul>
-        <li>
-          <a [routerLink]="['/', roomId(), 'blue']" class="link-primary"
-            >/{{ roomId() }}/blue</a
-          >
-        </li>
-        <li>
-          <a [routerLink]="['/', roomId(), 'red']" class="link-danger"
-            >/{{ roomId() }}/red</a
-          >
-        </li>
-        <li>
-          <a [routerLink]="['/', roomId(), 'spec']" class="link-secondary"
-            >/{{ roomId() }}/spec</a
-          >
-        </li>
-      </ul>
+      <div class="d-flex flex-column gap-2">
+        <label class="form-label mb-1" for="blueLink">Blue side</label>
+        <div class="input-group mb-3">
+          <input id="blueLink" name="blueLink" type="text" class="form-control" [value]="`${roomId()}/blue`" readonly />
+          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/blue`)" title="Copiar blue side">
+            <i class="bi bi-clipboard"></i>&nbsp;COPY
+            <span class="visually-hidden">Copiar blue side</span>
+          </button>
+          <a [routerLink]="['/', roomId(), 'blue']" class="btn btn-primary">OPEN</a>
+        </div>
+        <label class="form-label mb-1" for="redLink">Red side</label>
+        <div class="input-group mb-3">
+          <input id="redLink" name="redLink" type="text" class="form-control" [value]="`${roomId()}/red`" readonly />
+          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/red`)" title="Copiar red side">
+            <i class="bi bi-clipboard"></i>&nbsp;COPY
+            <span class="visually-hidden">Copiar red side</span>
+          </button>
+          <a [routerLink]="['/', roomId(), 'red']" class="btn btn-danger">OPEN</a>
+        </div>
+        <label class="form-label mb-1" for="specLink">Spectator</label>
+        <div class="input-group mb-3">
+          <input id="specLink" name="specLink" type="text" class="form-control" [value]="`${roomId()}/spec`" readonly />
+          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/spec`)" title="Copiar spectator">
+            <i class="bi bi-clipboard"></i>&nbsp;COPY
+            <span class="visually-hidden">Copiar spectator</span>
+          </button>
+          <a [routerLink]="['/', roomId(), 'spec']" class="btn btn-secondary">OPEN</a>
+        </div>
+      </div>
     </div>
   }
 </div>

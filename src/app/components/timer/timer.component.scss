@@ -1,0 +1,7 @@
+@use 'styles/variables' as vars;
+
+.countdown-badge {
+  font-size: vars.$team-name-font-size;
+  text-transform: uppercase;
+  line-height: 1;
+}

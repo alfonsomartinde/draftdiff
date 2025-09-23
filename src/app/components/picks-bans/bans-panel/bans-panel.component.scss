@@ -1,0 +1,15 @@
+@use 'styles/variables' as vars;
+
+.panel-bans {
+  height: vars.$panel-height;
+}
+
+.bans {
+  width: 100%;
+  height: vars.$panel-height;
+
+  .ban { width: 100%; }
+  .champion-image { width: 100%; height: 100%; object-fit: cover; }
+  &.blue { justify-content: flex-start; }
+  &.red { justify-content: flex-end; }
+}

@@ -7,20 +7,8 @@ type Side = 'blue' | 'red';
   selector: 'app-team-name',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div
-      class="d-flex align-items-center align-content-center team-name antonio-700 text-uppercase text-shadow-sm rounded p-3"
-      [class.blue]="side() === 'blue'"
-      [class.red]="side() === 'red'"
-      [class.text-bg-primary]="side() === 'blue'"
-      [class.text-bg-danger]="side() === 'red'"
-      [class.justify-content-start]="side() === 'blue'"
-      [class.justify-content-end]="side() === 'red'"
-      [class.current]="current()"
-    >
-      {{ name() }}
-    </div>
-  `,
+  template: './team-name.component.html',
+  styleUrls: ['./team-name.component.scss'],
 })
 export class TeamNameComponent {
   readonly side = input<Side>('blue');

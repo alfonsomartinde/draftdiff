@@ -5,6 +5,7 @@ import { Component, input } from '@angular/core';
   selector: 'app-timer',
   standalone: true,
   imports: [CommonModule],
+  styleUrls: ['./timer.component.scss'],
   template: `<div class="countdown-badge badge antonio-700 p-3">{{ value() }}</div>`,
 })
 export class TimerComponent {
