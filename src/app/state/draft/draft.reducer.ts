@@ -56,14 +56,31 @@ export const draftReducer = createReducer(
     };
   }),
 
-  // payload: { ...newState }
+  // payload: { newState: { countdown, eventSeq? } }
   on(DraftActions['draft/tick'], (state, { newState }) => {
-    const next = {
+    const currentSeq = state?.eventSeq ?? 0;
+    const incomingSeq = (newState as any)?.eventSeq ?? currentSeq;
+
+    // Ignore stale ticks
+    if (incomingSeq < currentSeq) {
+      return state;
+    }
+
+    // For same seq, update only countdown to avoid overwriting steps
+    if (incomingSeq === currentSeq) {
+      if (state.countdown === newState.countdown) return state;
+      return {
+        ...state,
+        countdown: Number(newState.countdown ?? state.countdown),
+      };
+    }
+
+    // For safety (shouldn't happen for ticks), if incoming is newer, still only update countdown
+    return {
       ...state,
-      ...newState,
-    };
-    console.log('[draft-reducer] TICK', { from: state.countdown, to: next.countdown });
-    return next;
+      countdown: Number(newState.countdown ?? state.countdown),
+      eventSeq: Number(incomingSeq),
+    } as any;
   }),
 
   // payload: { roomId, side }

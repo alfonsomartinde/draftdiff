@@ -3,7 +3,7 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { WorkerClientService } from '@services/worker-client.service';
 import { DraftActions } from './draft.actions';
 import { EMPTY, of } from 'rxjs';
-import { filter, mergeMap, tap } from 'rxjs/operators';
+import { filter, map, mergeMap, tap, distinctUntilChanged } from 'rxjs/operators';
 import { IPostMessage } from '@models/worker';
 
 @Injectable()
@@ -11,24 +11,32 @@ export class DraftEffects {
   private readonly client = inject(WorkerClientService);
   private readonly actions$ = inject(Actions);
 
-  // Bridge incoming worker events to NgRx actions
-  readonly incoming$ = createEffect(() =>
+  // Bridge incoming SERVER/STATE to hydrate full state
+  readonly incomingState$ = createEffect(() =>
     this.client.incoming$.pipe(
       tap((m) => console.log('[draft-effects] INCOMING MESSAGE', m)),
       filter((m: IPostMessage | null): m is IPostMessage => !!m),
-      mergeMap((m) => {
-        switch (m.type) {
-          case 'SERVER/TICK':
-          case 'SERVER/STATE':
-            return of(
-              DraftActions['draft/hydrate']({
-                newState: m.payload.state,
-              }),
-            );
-          default:
-            return EMPTY;
-        }
+      filter((m) => m.type === 'SERVER/STATE'),
+      map((m) => DraftActions['draft/hydrate']({ newState: m.payload.state })),
+    ),
+  );
+
+  // Bridge incoming SERVER/TICK to lightweight tick updates
+  readonly incomingTick$ = createEffect(() =>
+    this.client.incoming$.pipe(
+      filter((m: IPostMessage | null): m is IPostMessage => !!m),
+      filter((m) => m.type === 'SERVER/TICK'),
+      map((m) => {
+        const s: any = m.payload?.state ?? {};
+        return DraftActions['draft/tick']({
+          newState: {
+            countdown: Number(s.countdown ?? 0),
+            eventSeq: Number(s.eventSeq ?? 0),
+          } as any,
+        });
       }),
+      // Only propagate when countdown actually changes
+      distinctUntilChanged((a, b) => a.newState.countdown === b.newState.countdown),
     ),
   );
 
