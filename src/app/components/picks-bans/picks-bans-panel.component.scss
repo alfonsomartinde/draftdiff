@@ -38,10 +38,13 @@
   }
 }
 
+.team-name-wrapper {
+  width: 100%;
+}
+
 .team-name {
   font-size: 1.8rem;
   line-height: 1;
-  width: 100%;
 
   &.blue {
     text-align: left;
@@ -58,6 +61,13 @@
     -ms-transition: background 1s ease-in-out;
     transition: background 1s ease-in-out;
   }
+}
+
+.countdown-wrapper {
+  width: 11rem;
+  text-align: center;
+  background-color: RGBA(var(--bs-dark-rgb), var(--bs-bg-opacity, 1)) !important;
+  border-radius: 0.5rem;
 }
 
 .panel-bans {

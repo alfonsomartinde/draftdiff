@@ -162,5 +162,7 @@ export function maskedFromCurrent(state: DraftState): DraftState {
     countdown: base.countdown,
     isFinished: true,
     teams: base.teams,
+    // Make hydrate strictly newer so reducer fully replaces instead of merging same-seq
+    eventSeq: (state.eventSeq ?? 0) + 1,
   } as DraftState;
 }

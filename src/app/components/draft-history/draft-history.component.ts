@@ -147,6 +147,8 @@ export class DraftHistoryComponent implements OnChanges {
         championId: undefined,
         pending: i === 0,
       })),
+      // Ensure reducer treats this base hydrate as newer than any previous state
+      eventSeq: (s.eventSeq ?? 0) + 1,
     };
   }
 

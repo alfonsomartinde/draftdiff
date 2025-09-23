@@ -5,9 +5,22 @@
   [imageById]="imageById()"
 >
   <div bans-center class="d-flex justify-content-center gap-2">
-    <app-team-name [side]="'blue'" [name]="teamNameBlue()" [current]="step()?.side === 'blue'" />
-    <app-timer [value]="countdown()" />
-    <app-team-name [side]="'red'" [name]="teamNameRed()" [current]="step()?.side === 'red'" />
+    <app-team-name 
+      [side]="'blue'" 
+      [name]="teamNameBlue()" 
+      [current]="step()?.side === 'blue'" 
+      class="team-name-wrapper blue" 
+    />
+    <app-timer 
+      [value]="countdown()" 
+      class="countdown-wrapper" 
+    />
+    <app-team-name 
+      [side]="'red'" 
+      [name]="teamNameRed()" 
+      [current]="step()?.side === 'red'" 
+      class="team-name-wrapper red"
+    />
   </div>
 </app-bans-panel>
 

@@ -146,6 +146,9 @@ export class SpecPageComponent {
 
       const masked = maskedFromCurrent(s as any);
       this.store.dispatch(DraftActions['draft/hydrate']({ newState: masked }));
+      // Prevent server from immediately re-hydrating the final state again
+      // while we are paused at the beginning of the replay in deferred mode
+      this.client.disconnect();
       this.isMasked.set(true);
     });
   }
