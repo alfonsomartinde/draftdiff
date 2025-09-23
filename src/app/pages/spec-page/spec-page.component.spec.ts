@@ -49,13 +49,49 @@ describe('SpecPageComponent', () => {
     expect(c.replayCountdown()).toBe(30);
   });
 
-  it('togglePlayback starts replay and advances at least one event', () => {
+  it('togglePlayback starts replay and advances respecting event timestamps', () => {
     const f = TestBed.createComponent(SpecPageComponent);
     const c = f.componentInstance as any;
-    // Stub environment to avoid timers and sockets
-    c.beginReplayInterval = (_: any[]) => {};
+    // Stub environment to avoid sockets and countdown interval side effects
+    c.beginCountdownInterval = () => {};
     c.client = { disconnect: () => {} };
     // Make replay mode eligible
+    c.initialWasFinished.set(true);
+    const base = new Date('2025-01-01T00:00:00.000Z');
+    const at0 = base.toISOString();
+    const at200 = new Date(base.getTime() + 200).toISOString();
+    const s: DraftState = {
+      ...initialDraftState,
+      events: [
+        { seq: 1, at: at0, source: 'client', type: 'CLIENT/READY', payload: { side: 'blue' }, countdownAt: 30 },
+        { seq: 2, at: at200, source: 'client', type: 'CLIENT/READY', payload: { side: 'red' }, countdownAt: 30 },
+      ],
+    } as any;
+    (c as any).draft = () => s;
+    // Preconditions
+    expect(c.isReplayMode()).toBeTrue();
+    expect(c.isReplaying()).toBeFalse();
+    // Control timers with Jasmine clock
+    jasmine.clock().install();
+    jasmine.clock().mockDate(base);
+    // Act
+    c.togglePlayback();
+    // First event should apply immediately (zero delta from base)
+    expect(c.isReplaying()).toBeTrue();
+    expect(c.replayIdx()).toBeGreaterThanOrEqual(1);
+    // Advance virtual time for the second event
+    jasmine.clock().tick(199);
+    expect(c.replayIdx()).toBe(1);
+    jasmine.clock().tick(1);
+    expect(c.replayIdx()).toBeGreaterThanOrEqual(2);
+    jasmine.clock().uninstall();
+  });
+
+  it('togglePlayback advances with invalid timestamps using immediate fallback', () => {
+    const f = TestBed.createComponent(SpecPageComponent);
+    const c = f.componentInstance as any;
+    c.beginCountdownInterval = () => {};
+    c.client = { disconnect: () => {} };
     c.initialWasFinished.set(true);
     const s: DraftState = {
       ...initialDraftState,
@@ -65,13 +101,8 @@ describe('SpecPageComponent', () => {
       ],
     } as any;
     (c as any).draft = () => s;
-    // Preconditions
     expect(c.isReplayMode()).toBeTrue();
-    expect(c.isReplaying()).toBeFalse();
-    // Act
     c.togglePlayback();
-    // Assert
-    expect(c.isReplaying()).toBeTrue();
     expect(c.replayIdx()).toBeGreaterThanOrEqual(1);
   });
 

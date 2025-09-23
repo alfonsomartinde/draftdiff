@@ -1,4 +1,4 @@
-@import 'bootstrap/scss/bootstrap';
+@use 'bootstrap/scss/bootstrap' as *;
 
 $panel-height: 4.1rem;
 $team-name-font-size: 1.8rem;
