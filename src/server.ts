@@ -140,12 +140,6 @@ function generateRoomId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-// Helpers movidos a módulos
-
-// Lógica movida a módulos
-
-// Lógica de tiempo y handlers de eventos se movieron a ./server/events
-
 /**
  * Socket.io connection
  */
@@ -278,6 +272,47 @@ app.use(async (req, res, next) => {
 // Start server unconditionally
 server.listen(port, () => {
   console.log(`Node ${SSR_ENABLED ? 'SSR' : 'CSR'} + Socket.io listening on http://localhost:${port}`);
+});
+
+// Handle graceful shutdown for dev watch restarts to avoid EADDRINUSE
+let isShuttingDown = false;
+function gracefulShutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  try {
+    io.close();
+  } catch {}
+  try {
+    server.close(() => {
+      process.exit(0);
+    });
+  } catch {
+    process.exit(0);
+  }
+  // Fallback exit in case close callback is not invoked
+  setTimeout(() => process.exit(0), 2000).unref();
+}
+
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
+
+// Retry bind if port is briefly busy during rapid restarts
+server.on('error', (err: any) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error(`[server] Port ${port} in use, retrying in 500ms...`);
+    setTimeout(() => {
+      try {
+        server.close();
+      } catch {}
+      try {
+        server.listen(port);
+      } catch (e) {
+        console.error('[server] Retry listen failed:', e);
+      }
+    }, 500).unref();
+    return;
+  }
+  console.error('[server] Unexpected error:', err);
 });
 
 /**

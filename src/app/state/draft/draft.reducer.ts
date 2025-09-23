@@ -8,10 +8,53 @@ export const draftReducer = createReducer(
   initialDraftState,
 
   // payload: { ...newState }
-  on(DraftActions['draft/hydrate'], (state, { newState }) => ({
-    ...state,
-    ...newState,
-  })),
+  on(DraftActions['draft/hydrate'], (state, { newState }) => {
+    const currentSeq = state?.eventSeq ?? 0;
+    const incomingSeq = newState?.eventSeq ?? 0;
+
+    // If incoming is older, only refresh countdown to avoid UI flicker
+    if (incomingSeq < currentSeq) {
+      return {
+        ...state,
+        countdown: newState.countdown,
+      };
+    }
+
+    // If same seq, treat as tick/state echo: preserve local optimistic selection
+    if (incomingSeq === currentSeq) {
+      const steps = Array.isArray(newState.steps) ? newState.steps.slice() : state.steps;
+      const idx = state.currentStepId;
+      if (idx >= 0 && idx < steps.length) {
+        const localStep: any = state.steps[idx];
+        const incomingStep: any = steps[idx];
+        if (
+          localStep &&
+          incomingStep &&
+          localStep.side === incomingStep.side &&
+          localStep.type === incomingStep.type
+        ) {
+          if (
+            localStep.championId !== undefined &&
+            localStep.championId !== null &&
+            incomingStep.championId !== localStep.championId
+          ) {
+            steps[idx] = { ...incomingStep, championId: localStep.championId };
+          }
+        }
+      }
+      return {
+        ...state,
+        ...newState,
+        steps,
+      };
+    }
+
+    // For newer seq, accept server state as source of truth
+    return {
+      ...state,
+      ...newState,
+    };
+  }),
 
   // payload: { ...newState }
   on(DraftActions['draft/tick'], (state, { newState }) => {
