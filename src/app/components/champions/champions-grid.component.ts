@@ -6,10 +6,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { selectChampionsItems, selectChampionsStatus } from '@state/champions/champions.selectors';
 import { ChampionItem } from '@models/champion';
 import { ChampionsActions } from '@state/champions/champions.actions';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-champions-grid',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslateModule],
   standalone: true,
   templateUrl: './champions-grid.component.html',
   styleUrls: ['./champions-grid.component.scss'],

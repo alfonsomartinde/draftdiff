@@ -3,6 +3,7 @@ import { Component, input, output, computed } from '@angular/core';
 import { IStep } from '@models/draft';
 import { ChampionItem } from '@models/champion';
 import { ChampionsGridComponent } from '@components/champions/champions-grid.component';
+import { TranslateModule } from '@ngx-translate/core';
 
 /**
  * PicksPanelComponent
@@ -14,7 +15,7 @@ import { ChampionsGridComponent } from '@components/champions/champions-grid.com
 @Component({
   selector: 'app-picks-panel',
   standalone: true,
-  imports: [CommonModule, ChampionsGridComponent],
+  imports: [CommonModule, ChampionsGridComponent, TranslateModule],
   templateUrl: './picks-panel.component.html',
   styleUrls: ['./picks-panel.component.scss'],
 })

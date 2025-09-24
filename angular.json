@@ -62,7 +62,7 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles/styles.scss"
             ],
             "server": "src/main.server.ts",
             "outputMode": "server",
@@ -138,7 +138,7 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles/styles.scss"
             ]
           }
         }

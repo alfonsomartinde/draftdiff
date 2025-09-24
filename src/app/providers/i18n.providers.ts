@@ -9,7 +9,7 @@ export function provideI18n() {
   return [
     importProvidersFrom(
       TranslateModule.forRoot({
-        fallbackLang: 'es',
+        fallbackLang: 'en',
         loader: {
           provide: TranslateLoader,
           useClass: TranslateHttpLoader,
@@ -28,7 +28,7 @@ export function provideI18n() {
       // Evita ejecutar en SSR para no bloquear el prerender
       if (typeof window === 'undefined') return;
       const translate = inject(TranslateService);
-      translate.use('es');
+      translate.use('en');
     }),
   ];
 }

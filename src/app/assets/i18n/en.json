@@ -1,10 +1,45 @@
 {
-  "title": "Room: {{room}} · {{side}}",
-  "start": "Start",
-  "confirm": "Confirm",
-  "cancel": "Cancel",
-  "bansBlue": "Blue Bans",
-  "bansRed": "Red Bans",
-  "picksBlue": "Blue Picks",
-  "picksRed": "Red Picks"
+  "common": {
+    "copy": "Copy",
+    "open": "Open",
+    "clear": "Clear",
+    "restart": "Restart",
+    "confirm": "Confirm",
+    "finished": "Finished",
+    "waiting": "Waiting...",
+    "ready": "Ready",
+    "start": "Start",
+    "events": "events",
+    "champion": "Champion",
+    "blueSide": "Blue side",
+    "redSide": "Red side",
+    "spectator": "Spectator"
+  },
+  "lobby": {
+    "create": {
+      "title": "Create room",
+      "form": {
+        "blueLabel": "Blue team",
+        "bluePlaceholder": "Blue team",
+        "redLabel": "Red team",
+        "redPlaceholder": "Red team",
+        "create": "Create"
+      }
+    },
+    "links": {
+      "title": "Links",
+      "copyBlueTitle": "Copy blue side",
+      "copyRedTitle": "Copy red side",
+      "copySpecTitle": "Copy spectator"
+    }
+  },
+  "champions": {
+    "search": {
+      "placeholder": "Search champion"
+    }
+  },
+  "history": {
+    "start": "Start",
+    "events": "events"
+  }
 }

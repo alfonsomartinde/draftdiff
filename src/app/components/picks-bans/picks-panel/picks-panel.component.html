@@ -11,8 +11,8 @@
               class="rounded champion-image"
               [class.placeholder]="step?.championId == null"
               [class.pending]="step?.pending && isPending()"
-              alt="Champion"
-              title="Champion"
+              [attr.alt]="'common.champion' | translate"
+              [attr.title]="'common.champion' | translate"
             />
             <span class="badge bg-black text-white p-2 position-absolute bottom-0 start-0">
               {{ nameById()(step?.championId ?? null) }}
@@ -46,8 +46,8 @@
               class="rounded champion-image"
               [class.placeholder]="step?.championId == null"
               [class.pending]="step?.pending && isPending()"
-              alt="Champion"
-              title="Champion"
+              [attr.alt]="'common.champion' | translate"
+              [attr.title]="'common.champion' | translate"
             />
             <span class="badge bg-black text-white p-2 position-absolute bottom-0 end-0 z-1">
               {{ nameById()(step?.championId ?? null) }}

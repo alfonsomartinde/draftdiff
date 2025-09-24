@@ -1,10 +1,45 @@
 {
-  "title": "Sala: {{room}} · {{side}}",
-  "start": "Comenzar",
-  "confirm": "Confirmar",
-  "cancel": "Cancelar",
-  "bansBlue": "Baneos Azul",
-  "bansRed": "Baneos Rojo",
-  "picksBlue": "Picks Azul",
-  "picksRed": "Picks Rojo"
+  "common": {
+    "copy": "Copiar",
+    "open": "Abrir",
+    "clear": "Limpiar",
+    "restart": "Reiniciar",
+    "confirm": "Confirmar",
+    "finished": "Finalizado",
+    "waiting": "Esperando...",
+    "ready": "Listo",
+    "start": "Inicio",
+    "events": "eventos",
+    "champion": "Campeón",
+    "blueSide": "Lado azul",
+    "redSide": "Lado rojo",
+    "spectator": "Espectador"
+  },
+  "lobby": {
+    "create": {
+      "title": "Crear sala",
+      "form": {
+        "blueLabel": "Equipo azul",
+        "bluePlaceholder": "Equipo azul",
+        "redLabel": "Equipo rojo",
+        "redPlaceholder": "Equipo rojo",
+        "create": "Crear"
+      }
+    },
+    "links": {
+      "title": "Enlaces",
+      "copyBlueTitle": "Copiar lado azul",
+      "copyRedTitle": "Copiar lado rojo",
+      "copySpecTitle": "Copiar espectador"
+    }
+  },
+  "champions": {
+    "search": {
+      "placeholder": "Buscar campeón"
+    }
+  },
+  "history": {
+    "start": "Inicio",
+    "events": "eventos"
+  }
 }

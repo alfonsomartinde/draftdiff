@@ -1,5 +1,6 @@
 <div class="draft-history-container">
   <div class="draft-history-inner">
+    <label for="draft-history-slider" class="form-label">{{ 'history.events' | translate }}</label>
     <input
       type="range"
       class="form-range w-100"
@@ -9,10 +10,11 @@
       [step]="1"
       [disabled]="controlled"
       (input)="setIndex(($any($event.target).valueAsNumber))"
+      id="draft-history-slider"
     />
     <div class="d-flex justify-content-between small mt-1">
-      <span>{{ index() < 0 ? 'Start' : (index() + 1) + ' / ' + total() }}</span>
-      <span>{{ total() }} events</span>
+      <span>{{ index() < 0 ? ('history.start' | translate) : (index() + 1) + ' / ' + total() }}</span>
+      <span>{{ total() }} {{ 'history.events' | translate }}</span>
     </div>
   </div>
   

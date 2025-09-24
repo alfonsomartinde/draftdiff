@@ -18,10 +18,11 @@ import { WorkerClientService } from '@services/worker-client.service';
 import { maskedFromCurrent, withCountdown } from '@models/draft';
 import { IPostMessage } from '@models/worker';
 import { filter, take } from 'rxjs/operators';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-spec-page',
-  imports: [CommonModule, RouterModule, PicksBansPanelComponent, DraftHistoryComponent],
+  imports: [CommonModule, RouterModule, PicksBansPanelComponent, DraftHistoryComponent, TranslateModule],
   standalone: true,
   templateUrl: './spec-page.component.html',
   styleUrls: ['./spec-page.component.scss'],

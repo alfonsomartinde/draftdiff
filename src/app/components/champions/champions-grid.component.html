@@ -1,13 +1,26 @@
 @if (!isSpec()) {
   <div class="mb-2 d-flex align-items-center gap-2">
     <div class="input-group mb-3">
+      <label 
+        for="champions-search" 
+        class="input-group-text">
+        {{ 'champions.search.placeholder' | translate }}
+      </label>
       <input
+        id="champions-search"
         class="form-control"
-        placeholder="Buscar campeón"
+        [placeholder]="'champions.search.placeholder' | translate"
         [ngModel]="query()"
         (ngModelChange)="query.set($event)"
       />    
-      <button class="btn btn-outline-secondary" type="button" title="Clear" (click)="clear($event)" id="button-addon2">Clear</button>
+      <button 
+        class="btn btn-secondary" 
+        type="button" 
+        [title]="'common.clear' | translate" 
+        (click)="clear($event)" 
+        id="button-addon2">
+        {{ 'common.clear' | translate }}
+      </button>
     </div>
   </div>
 }
@@ -20,8 +33,8 @@
         class="btn p-0 w-100 border-0 overflow-hidden position-relative"
         (click)="emitSelectedChampionEvent(c, $event)"
         [disabled]="usedIds()?.has(c.id) || disabled()"
-        [attr.aria-label]="c.name || 'Champion'"
-        [attr.title]="c.name || 'Champion'"
+        [attr.aria-label]="c.name || ('common.champion' | translate)"
+        [attr.title]="c.name || ('common.champion' | translate)"
         [class.disabled]="disabled()"
       >
         @if (usedIds()?.has(c.id)) {
@@ -30,12 +43,14 @@
         <img
           [src]="c.squareImage"
           class="img-fluid rounded"
-          [alt]="c.name || 'Champion'"
+          [alt]="c.name || ('common.champion' | translate)"
           [class.grayscale]="usedIds()?.has(c.id)"
           [class.pending]="isPending()"
           aria-hidden="true"
         />
-        <span class="visually-hidden">{{ c.name || 'Champion' }}</span>
+        <span class="visually-hidden">
+          {{ c.name || ('common.champion' | translate) }}
+        </span>
       </button>
     </div>
   }

@@ -11,8 +11,8 @@
               class="rounded champion-image"
               [class.placeholder]="step?.championId == null"
               [class.pending]="step?.pending && hasStarted()"
-              alt="Champion"
-              title="Champion"
+              [attr.alt]="'common.champion' | translate"
+              [attr.title]="'common.champion' | translate"
             />
           }
         </div>
@@ -36,8 +36,8 @@
               class="rounded champion-image"
               [class.placeholder]="step?.championId == null"
               [class.pending]="step?.pending && hasStarted()"
-              alt="Champion"
-              title="Champion"
+              [attr.alt]="'common.champion' | translate"
+              [attr.title]="'common.champion' | translate"
             />
           }
         </div>

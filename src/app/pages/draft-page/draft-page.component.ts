@@ -24,10 +24,11 @@ import { WorkerClientService } from '@services/worker-client.service';
 import { DraftActions } from '@state/draft/draft.actions';
 import { PicksBansPanelComponent } from '@components/picks-bans/picks-bans-panel.component';
 import { DraftSide, UserSide, IStep, ITeam } from '@models/draft';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-draft-page',
-  imports: [CommonModule, RouterModule, PicksBansPanelComponent],
+  imports: [CommonModule, RouterModule, PicksBansPanelComponent, TranslateModule],
   standalone: true,
   templateUrl: './draft-page.component.html',
   styleUrls: ['./draft-page.component.scss'],

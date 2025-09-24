@@ -16,11 +16,12 @@ import { selectDraft } from '@state/draft/draft.selectors';
 import { DraftActions } from '@state/draft/draft.actions';
 import { withCountdown } from '@models/draft';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-draft-history',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslateModule],
   templateUrl: './draft-history.component.html',
   styleUrls: ['./draft-history.component.scss'],
 })

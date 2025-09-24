@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
 import { RoomsService } from '@services/rooms.service';
 import { DraftActions } from '@state/draft/draft.actions';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -11,7 +12,7 @@ import { DraftState } from '@models/draft';
 
 @Component({
   selector: 'app-lobby-page',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, TranslateModule],
   standalone: true,
   templateUrl: './lobby-page.component.html',
   styleUrls: ['./lobby-page.component.scss'],

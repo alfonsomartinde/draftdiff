@@ -17,7 +17,7 @@
         [class.btn-secondary]="!confirmable()"
         [class.btn-warning]="confirmable()"  
       >
-        {{ confirmable() ? 'Confirm' : isFinished() ? 'Finished' : 'Waiting...' }}
+        {{ confirmable() ? ('common.confirm' | translate) : (isFinished() ? ('common.finished' | translate) : ('common.waiting' | translate)) }}
       </button>
     } @else {
       <button 
@@ -26,7 +26,7 @@
         (click)="ready()" 
         [disabled]="isReady()"
         >
-        Ready
+        {{ 'common.ready' | translate }}
       </button>
     }
   </div>

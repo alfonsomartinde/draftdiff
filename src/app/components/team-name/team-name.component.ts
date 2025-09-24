@@ -7,7 +7,7 @@ type Side = 'blue' | 'red';
   selector: 'app-team-name',
   standalone: true,
   imports: [CommonModule],
-  template: './team-name.component.html',
+  templateUrl: './team-name.component.html',
   styleUrls: ['./team-name.component.scss'],
 })
 export class TeamNameComponent {

@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { IStep } from '@models/draft';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-bans-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './bans-panel.component.html',
   styleUrls: ['./bans-panel.component.scss'],
 })

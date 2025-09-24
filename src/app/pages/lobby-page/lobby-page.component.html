@@ -1,63 +1,63 @@
 <div class="container py-4">
-  <h1 class="h4 mb-3">Crear sala</h1>
+  <h1 class="h4 mb-3">{{ 'lobby.create.title' | translate }}</h1>
   <form class="row g-3" (ngSubmit)="create()">
     <div class="col-md-4">
-      <label class="form-label" for="blueTeamName">Equipo azul</label>
+      <label class="form-label" for="blueTeamName">{{ 'lobby.create.form.blueLabel' | translate }}</label>
       <input
         id="blueTeamName"
         class="form-control"
-        placeholder="Equipo azul"
+        [placeholder]="'lobby.create.form.bluePlaceholder' | translate"
         [(ngModel)]="blueTeamName"
         name="blueTeamName"
         required
       />
     </div>
     <div class="col-md-4">
-      <label class="form-label" for="redTeamName">Equipo rojo</label>
+      <label class="form-label" for="redTeamName">{{ 'lobby.create.form.redLabel' | translate }}</label>
       <input
         id="redTeamName"
         class="form-control"
-        placeholder="Equipo rojo"
+        [placeholder]="'lobby.create.form.redPlaceholder' | translate"
         [(ngModel)]="redTeamName"
         name="redTeamName"
         required
       />
     </div>
     <div class="col-md-4 d-flex align-items-end">
-      <button class="btn btn-primary w-100" type="submit">Crear</button>
+      <button class="btn btn-primary w-100" type="submit">{{ 'lobby.create.form.create' | translate }}</button>
     </div>
   </form>
 
   @if (roomId() && roomId() !== 'local') {
     <div class="mt-4">
-      <h2 class="h5">Enlaces</h2>
+      <h2 class="h5">{{ 'lobby.links.title' | translate }}</h2>
       <div class="d-flex flex-column gap-2">
-        <label class="form-label mb-1" for="blueLink">Blue side</label>
         <div class="input-group mb-3">
-          <input id="blueLink" name="blueLink" type="text" class="form-control" [value]="`${roomId()}/blue`" readonly />
-          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/blue`)" title="Copiar blue side">
-            <i class="bi bi-clipboard"></i>&nbsp;COPY
-            <span class="visually-hidden">Copiar blue side</span>
+          <label for="blueLink" class="input-group-text">{{ 'common.blueSide' | translate }}</label>
+          <input id="blueLink" name="blueLink" type="text" class="form-control" [value]="`${roomId()}/blue`" labeledby="blue-input-group-text" readonly />
+          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/blue`)" [title]="'lobby.links.copyBlueTitle' | translate">
+            <i class="bi bi-clipboard"></i>&nbsp;{{ 'common.copy' | translate }}
+            <span class="visually-hidden">{{ 'lobby.links.copyBlueTitle' | translate }}</span>
           </button>
-          <a [routerLink]="['/', roomId(), 'blue']" class="btn btn-primary">OPEN</a>
+          <a [routerLink]="['/', roomId(), 'blue']" class="btn btn-primary">{{ 'common.open' | translate }}</a>
         </div>
-        <label class="form-label mb-1" for="redLink">Red side</label>
         <div class="input-group mb-3">
-          <input id="redLink" name="redLink" type="text" class="form-control" [value]="`${roomId()}/red`" readonly />
-          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/red`)" title="Copiar red side">
-            <i class="bi bi-clipboard"></i>&nbsp;COPY
-            <span class="visually-hidden">Copiar red side</span>
+          <label for="redLink" class="input-group-text">{{ 'common.redSide' | translate }}</label>
+          <input id="redLink" name="redLink" type="text" class="form-control" [value]="`${roomId()}/red`" labeledby="red-input-group-text" readonly />
+          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/red`)" [title]="'lobby.links.copyRedTitle' | translate">
+            <i class="bi bi-clipboard"></i>&nbsp;{{ 'common.copy' | translate }}
+            <span class="visually-hidden">{{ 'lobby.links.copyRedTitle' | translate }}</span>
           </button>
-          <a [routerLink]="['/', roomId(), 'red']" class="btn btn-danger">OPEN</a>
+          <a [routerLink]="['/', roomId(), 'red']" class="btn btn-danger">{{ 'common.open' | translate }}</a>
         </div>
-        <label class="form-label mb-1" for="specLink">Spectator</label>
         <div class="input-group mb-3">
-          <input id="specLink" name="specLink" type="text" class="form-control" [value]="`${roomId()}/spec`" readonly />
-          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/spec`)" title="Copiar spectator">
-            <i class="bi bi-clipboard"></i>&nbsp;COPY
-            <span class="visually-hidden">Copiar spectator</span>
+          <label for="specLink" class="input-group-text">{{ 'common.spectator' | translate }}</label>
+          <input id="specLink" name="specLink" type="text" class="form-control" [value]="`${roomId()}/spec`" labeledby="spec-input-group-text" readonly />
+          <button class="btn btn-secondary" type="button" (click)="copyLink(`${roomId()}/spec`)" [title]="'lobby.links.copySpecTitle' | translate">
+            <i class="bi bi-clipboard"></i>&nbsp;{{ 'common.copy' | translate }}
+            <span class="visually-hidden">{{ 'lobby.links.copySpecTitle' | translate }}</span>
           </button>
-          <a [routerLink]="['/', roomId(), 'spec']" class="btn btn-secondary">OPEN</a>
+          <a [routerLink]="['/', roomId(), 'spec']" class="btn btn-secondary">{{ 'common.open' | translate }}</a>
         </div>
       </div>
     </div>
