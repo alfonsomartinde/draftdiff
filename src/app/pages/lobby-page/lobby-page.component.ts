@@ -10,6 +10,12 @@ import { selectRoomId } from '@state/draft/draft.selectors';
 import { Store } from '@ngrx/store';
 import { DraftState } from '@models/draft';
 
+/**
+ * LobbyPageComponent
+ *
+ * Provides a simple form to create a new draft room and shows shareable links
+ * for Blue/Red/Spectator once created. Uses RoomsService to call backend API.
+ */
 @Component({
   selector: 'app-lobby-page',
   imports: [CommonModule, FormsModule, RouterLink, TranslateModule],

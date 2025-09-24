@@ -11,6 +11,15 @@ export type RoomRuntime = {
   started: boolean;
 };
 
+/**
+ * Orchestrates in-memory draft runtime per room and applies reducer effects.
+ *
+ * Responsibilities:
+ * - Maintain RoomRuntime (state, timer, deadlines, started flag)
+ * - Route client actions to domain reducer and execute returned effects
+ * - Persist state to DB and emit socket messages when needed
+ * - Manage countdown timer and auto-confirm on timeout
+ */
 class EventsService {
   private static _instance: EventsService | null = null;
   private readonly DEFAULT_DEADLINE_SECONDS = 30;
@@ -68,6 +77,7 @@ class EventsService {
   }
 
   startTimer(room: RoomRuntime, roomId: string, io: Server): void {
+    /** Starts or restarts the per-room countdown timer when both teams are ready. */
     const bothReady = !!(room.state?.teams?.blue?.ready && room.state?.teams?.red?.ready);
     if (!bothReady) return;
     if (room.timer) this.resetTimer(room, roomId);
@@ -82,11 +92,13 @@ class EventsService {
   }
 
   resetTimer(room: RoomRuntime, roomId: string): void {
+    /** Stops the timer and clears runtime deadline/started flags. */
     if (room.timer) clearInterval(room.timer);
     this.updateRoomProperties(roomId, { timer: null, deadlineMs: 0, started: false });
   }
 
   async tick(room: RoomRuntime, roomId: string, io: Server): Promise<void> {
+    /** Called each second while timer is running; emits tick and auto-confirms at 0. */
     if (!room.timer) return;
     if (!room.state) return;
     const countdown = Math.max(0, Math.ceil((room.deadlineMs - Date.now()) / 1000));
@@ -212,6 +224,7 @@ class EventsService {
     io: Server,
     effects: ReducerEffect[],
   ): Promise<void> {
+    /** Executes reducer effects, ensuring single persist emits SERVER/STATE. */
     if (!room?.state) return;
     const hasPersist = effects.some((e) => e.kind === 'persist');
     const handlers = this.getEffectHandlers();

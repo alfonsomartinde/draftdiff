@@ -4,6 +4,13 @@ import { DraftState } from '@models/draft';
 
 @Injectable({ providedIn: 'root' })
 export class RoomsService {
+  /**
+   * Creates a new draft room via the backend API.
+   *
+   * @param input Object containing the blue and red team names
+   * @returns The initial DraftState persisted on the server
+   * @throws Error when the HTTP request fails
+   */
   async createRoom(input: { blueName: string; redName: string }): Promise<DraftState> {
     const res = await fetch(`${environment.socketUrl}/api/rooms`, {
       method: 'POST',

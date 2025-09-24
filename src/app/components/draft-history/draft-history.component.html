@@ -6,9 +6,9 @@
       class="form-range w-100"
       [min]="-1"
       [max]="total() - 1"
-      [value]="controlled ? (currentIndex ?? index()) : index()"
+      [value]="controlled() ? (currentIndex() ?? index()) : index()"
       [step]="1"
-      [disabled]="controlled"
+      [disabled]="controlled()"
       (input)="setIndex(($any($event.target).valueAsNumber))"
       id="draft-history-slider"
     />

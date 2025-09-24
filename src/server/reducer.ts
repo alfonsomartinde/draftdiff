@@ -1,5 +1,16 @@
 import { DraftState, DraftType, IStep, UserSide, DraftEvent } from '@models/draft';
 
+/**
+ * Domain reducer for draft actions.
+ *
+ * Purpose: Given current DraftState and a DomainAction, returns a new state and a list
+ * of side-effect descriptors to be performed by the orchestrator (events service).
+ *
+ * Notes:
+ * - Pure function w.r.t. external systems; uses deepClone to avoid accidental mutation.
+ * - Effects are symbolic (persist, emit-state, start/stop timer, etc.).
+ */
+
 export type DomainAction =
   | { type: 'CLIENT/JOIN' }
   | { type: 'CLIENT/READY'; payload: { side: UserSide } }

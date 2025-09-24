@@ -6,6 +6,12 @@ type Queryable = {
   query: (sql: string, values?: any[]) => Promise<[any, any]>;
 };
 
+/**
+ * Creates a MySQL connection pool from environment configuration.
+ *
+ * Why: Centralizes DB connection management with sensible defaults and timeouts.
+ * The pool is shared by the singleton DatabaseService.
+ */
 function createPool() {
   const url = process.env['DATABASE_URL'];
   if (url && url.trim().length > 0) {
@@ -28,6 +34,12 @@ function createPool() {
   });
 }
 
+/**
+ * Builds a summarized, non-sensitive view of DB configuration for diagnostics.
+ *
+ * Helps developers quickly verify which connection mode is used and whether SSL is enabled
+ * without revealing secrets. This is returned by describeConfig().
+ */
 function buildConfigSummary() {
   const url = process.env['DATABASE_URL'];
   if (url && url.trim().length > 0) {
@@ -48,6 +60,20 @@ export class DatabaseService {
   private readonly pool: mysql.Pool;
   private readonly configSummary: Record<string, any>;
 
+  /**
+   * Singleton service wrapping MySQL access for room state and events.
+   *
+   * Purpose: Provide safe, transactional updates of the draft `state` JSON and optional
+   * append-only `events` records, while emitting socket updates when needed.
+   *
+   * Usage:
+   * - DatabaseService.instance.updateRoomState(roomId, state, io)
+   * - DatabaseService.instance.insertRoomWithState(roomId, blue, red, initial)
+   *
+   * Design notes:
+   * - Uses a connection pool; transactions guard consistency per request.
+   * - Does not expose raw SQL to callers; keeps a small API surface.
+   */
   private constructor() {
     this.configSummary = buildConfigSummary();
     this.pool = createPool();
@@ -128,6 +154,12 @@ export class DatabaseService {
     redName: string,
     state: DraftState,
   ): Promise<void> {
+    /**
+     * Inserts a new room row with the initial serialized DraftState.
+     *
+     * Why: Room creation persists a baseline so late joiners can hydrate the state even
+     * before the draft officially starts.
+     */
     const conn = await this.getConnection();
     try {
       await conn.beginTransaction();
@@ -170,6 +202,13 @@ export class DatabaseService {
     io?: Server,
     externalConn?: mysql.PoolConnection,
   ): Promise<void> {
+    /**
+     * Serializes and persists the full room DraftState in a single UPDATE statement.
+     *
+     * Also emits SERVER/STATE via Socket.io when `io` is provided to keep clients in sync.
+     *
+     * Errors: Rolls back transaction and rethrows for upstream handling.
+     */
     if (!roomId) throw new Error('UPDATE ROOM STATE: roomId is required');
     if (!state) throw new Error('UPDATE ROOM STATE: state is required');
 
@@ -210,6 +249,13 @@ export class DatabaseService {
     payload: { type: string; data: any; state?: DraftState },
     stateForEnsure?: DraftState,
   ) {
+    /**
+     * Persists an append-only event record (seq, type, payload) for a room.
+     *
+     * Notes:
+     * - No-op if draft has not started or if type is PING/JOIN.
+     * - Ensures room row exists (inserts if missing) when `stateForEnsure` is provided.
+     */
     if (!started) return;
     const type = payload.type;
     if (type === 'PING' || type === 'JOIN') return;
@@ -244,6 +290,9 @@ export class DatabaseService {
   }
 
   async fetchRoomEvents(roomId: string) {
+    /**
+     * Returns all events for a room ordered by sequence, suitable for replay/spec.
+     */
     const conn = await this.getConnection();
     try {
       const [rows] = await conn.query(

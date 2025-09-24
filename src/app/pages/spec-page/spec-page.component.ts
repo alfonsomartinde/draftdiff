@@ -20,6 +20,12 @@ import { IPostMessage } from '@models/worker';
 import { filter, take } from 'rxjs/operators';
 import { TranslateModule } from '@ngx-translate/core';
 
+/**
+ * SpecPageComponent
+ *
+ * Spectator view with replay controls. Allows pausing/continuing and scrubbing through
+ * the events timeline while reflecting the original countdown values.
+ */
 @Component({
   selector: 'app-spec-page',
   imports: [CommonModule, RouterModule, PicksBansPanelComponent, DraftHistoryComponent, TranslateModule],

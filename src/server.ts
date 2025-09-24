@@ -15,6 +15,14 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const defaultSsr = process.env['NODE_ENV'] === 'production' ? 'false' : 'true';
 const SSR_ENABLED = String(process.env['SSR'] ?? defaultSsr) === 'true';
 
+/**
+ * Node entrypoint: Express + Socket.io server for the Angular SSR/CSR app.
+ *
+ * Responsibilities:
+ * - Serve static assets and optionally render SSR using @angular/ssr
+ * - Provide REST endpoints for room creation and Data Dragon proxy
+ * - Host Socket.io for real-time draft orchestration
+ */
 const app = express();
 let angularApp: any = null;
 let writeResponseToNodeResponseFn: any = null;

@@ -1,15 +1,5 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-  Input,
-  OnChanges,
-  SimpleChanges,
-  output,
-} from '@angular/core';
+import { Component, computed, effect, inject, signal, input, output, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectDraft } from '@state/draft/draft.selectors';
@@ -18,6 +8,12 @@ import { withCountdown } from '@models/draft';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 
+/**
+ * DraftHistoryComponent
+ *
+ * Timeline slider to scrub through draft events. In uncontrolled mode applies
+ * historical events deterministically; in controlled mode mirrors parent index.
+ */
 @Component({
   selector: 'app-draft-history',
   standalone: true,
@@ -25,7 +21,7 @@ import { TranslateModule } from '@ngx-translate/core';
   templateUrl: './draft-history.component.html',
   styleUrls: ['./draft-history.component.scss'],
 })
-export class DraftHistoryComponent implements OnChanges {
+export class DraftHistoryComponent implements OnInit {
   private readonly store = inject(Store);
 
   // Full draft state from store
@@ -39,12 +35,12 @@ export class DraftHistoryComponent implements OnChanges {
    * When true, the parent component drives the current index and the slider is disabled.
    * In controlled mode, user input is ignored and no events are dispatched from this component.
    */
-  @Input() controlled: boolean = false;
+  readonly controlled = input<boolean>(false);
   /**
    * Current index provided by the parent when in controlled mode.
    * Values: -1 for initial state, [0 .. events.length - 1] for applied events.
    */
-  @Input() currentIndex: number | null = null;
+  readonly currentIndex = input<number | null>(null);
 
   /**
    * Emits the selected index when the user scrubs the slider while not in controlled mode.
@@ -58,8 +54,9 @@ export class DraftHistoryComponent implements OnChanges {
     return Array.isArray(s?.events) ? s.events.length : 0;
   });
 
-  // When draft changes (e.g., navigation), keep index clamped to valid range
-  constructor() {
+  ngOnInit(): void {
+    this.index.set(this.currentIndex() ?? this.index());
+
     effect(() => {
       const s = this.draft();
       if (!s) return;
@@ -69,14 +66,16 @@ export class DraftHistoryComponent implements OnChanges {
       if (curr > len - 1) this.index.set(len - 1);
       if (curr < -1) this.index.set(-1);
     });
-  }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (typeof this.currentIndex === 'number') {
-      const len = this.total();
-      const clamped = Math.max(-1, Math.min(this.currentIndex, len - 1));
-      this.index.set(clamped);
-    }
+    // Reflect external controlled index updates reactively (replaces ngOnChanges)
+    effect(() => {
+      const incoming = this.currentIndex();
+      if (typeof incoming === 'number') {
+        const len = this.total();
+        const clamped = Math.max(-1, Math.min(incoming, len - 1));
+        this.index.set(clamped);
+      }
+    });
   }
 
   /**
@@ -85,7 +84,7 @@ export class DraftHistoryComponent implements OnChanges {
    * Ignored when `controlled` is true.
    */
   setIndex(value: number): void {
-    if (this.controlled) return; // ignore user input while controlled by parent (playing)
+    if (this.controlled()) return; // ignore user input while controlled by parent (playing)
     const s = this.draft();
     const len = this.total();
     if (!s || len === 0) {

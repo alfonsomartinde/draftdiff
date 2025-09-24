@@ -26,6 +26,12 @@ import { PicksBansPanelComponent } from '@components/picks-bans/picks-bans-panel
 import { DraftSide, UserSide, IStep, ITeam } from '@models/draft';
 import { TranslateModule } from '@ngx-translate/core';
 
+/**
+ * DraftPageComponent
+ *
+ * Hosts the main draft UI, connecting to the room via WorkerClientService and wiring
+ * NgRx selectors into signals for the PicksBans panel. Provides actions for ready/select/confirm.
+ */
 @Component({
   selector: 'app-draft-page',
   imports: [CommonModule, RouterModule, PicksBansPanelComponent, TranslateModule],
@@ -67,7 +73,7 @@ export class DraftPageComponent {
   readonly stepsSig = toSignal(this.store.select(selectSteps), { initialValue: [] as IStep[] });
   readonly countdownSig = toSignal(this.store.select(selectCountdown), { initialValue: 30 });
   readonly teamsSig = toSignal(this.store.select(selectTeams), {
-    initialValue: { blue: { name: 'Blue', ready: false }, red: { name: 'Red', ready: false } } as {
+    initialValue: { blue: { name: '', ready: false }, red: { name: '', ready: false } } as {
       blue: ITeam;
       red: ITeam;
     },

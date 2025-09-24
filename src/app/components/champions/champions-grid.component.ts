@@ -8,6 +8,15 @@ import { ChampionItem } from '@models/champion';
 import { ChampionsActions } from '@state/champions/champions.actions';
 import { TranslateModule } from '@ngx-translate/core';
 
+/**
+ * ChampionsGridComponent
+ *
+ * Renders a filterable grid of champions. Emits the selected champion when
+ * a card is clicked. Disables items already used or when `disabled` is true.
+ *
+ * Example:
+ * <app-champions-grid [champions]="items" (pickedChampion)="onPick($event)" />
+ */
 @Component({
   selector: 'app-champions-grid',
   imports: [CommonModule, FormsModule, TranslateModule],

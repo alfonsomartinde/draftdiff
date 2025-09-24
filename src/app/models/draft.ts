@@ -80,8 +80,9 @@ export function createInitialDraftState(options: Partial<DraftState> = {}): Draf
     steps: initialSteps,
     isFinished: false,
     teams: {
-      blue: { name: options.teams?.blue?.name ?? 'Blue', ready: false } as ITeam,
-      red: { name: options.teams?.red?.name ?? 'Red', ready: false } as ITeam,
+      // Avoid defaulting to "Blue/Red" to prevent initial flicker before hydration
+      blue: { name: options.teams?.blue?.name ?? '', ready: false } as ITeam,
+      red: { name: options.teams?.red?.name ?? '', ready: false } as ITeam,
     },
     events: [],
     eventSeq: 0,

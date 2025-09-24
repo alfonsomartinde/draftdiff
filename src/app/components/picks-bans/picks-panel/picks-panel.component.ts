@@ -4,6 +4,7 @@ import { IStep } from '@models/draft';
 import { ChampionItem } from '@models/champion';
 import { ChampionsGridComponent } from '@components/champions/champions-grid.component';
 import { TranslateModule } from '@ngx-translate/core';
+import { TRANSPARENT_PIXEL_GIF } from '@app/constants/images';
 
 /**
  * PicksPanelComponent
@@ -51,9 +52,9 @@ export class PicksPanelComponent {
 
   /** Resolve splash image URL for a champion id or return a 1x1 placeholder. */
   imgSplash = (id: number | null): string => {
-    if (id == null) return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    if (id == null) return TRANSPARENT_PIXEL_GIF;
     const image = this.imageById()?.[id];
-    if (!image) return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    if (!image) return TRANSPARENT_PIXEL_GIF;
     return image.splashImage;
   };
 }

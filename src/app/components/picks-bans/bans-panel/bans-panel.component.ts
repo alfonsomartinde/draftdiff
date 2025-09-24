@@ -2,7 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { IStep } from '@models/draft';
 import { TranslateModule } from '@ngx-translate/core';
+import { TRANSPARENT_PIXEL_GIF } from '@app/constants/images';
 
+/**
+ * BansPanelComponent
+ *
+ * Renders the bans lane for each team. Shows placeholder slots and pending state styling
+ * while the draft is in progress. Uses provided imageById mapping for champion squares.
+ */
 @Component({
   selector: 'app-bans-panel',
   standalone: true,
@@ -17,9 +24,9 @@ export class BansPanelComponent {
   readonly imageById = input<Record<number, { squareImage: string }>>();
 
   imgSquare = (id: number | null): string => {
-    if (id == null) return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    if (id == null) return TRANSPARENT_PIXEL_GIF;
     const image = this.imageById()?.[id];
-    if (!image) return 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    if (!image) return TRANSPARENT_PIXEL_GIF;
     return image.squareImage;
   };
 }
