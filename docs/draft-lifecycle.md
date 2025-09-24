@@ -31,6 +31,7 @@ Este documento describe cómo varía el estado de la aplicación durante un draf
 - Tabla `rooms` (o almacenamiento equivalente):
   - `id`, `blue_name`, `red_name`, `status`, `state` (JSON del `DraftState`)
   - Dentro de `state` se guarda TODO: pasos, equipos, `events` (historial en memoria), `eventSeq`, etc.
+  - Los eventos NO se almacenan en una tabla separada; viven en `state.events` y se persisten junto al `state`.
   - Opcional: persistir también `deadlineMs` y `started` (excluye `timer`) para recuperación tras caída.
 
 #### Reglas de guardado de eventos (in-room)
@@ -152,7 +153,7 @@ Eventos servidor → cliente:
 
 - El servidor emite `SERVER/TICK` cada 1 segundo mientras `timer` está activo.
 - En cada TICK:
-  - `countdown = max(0, ceil((deadlineMs - now)/1000))`.
+  - `countdown = max(0, ceil((deadlineMs - now)/1000))` y el servidor emite `SERVER/TICK { countdown }`.
   - Si `countdown` llega a `0`, el servidor confirma el paso (auto-confirm) y:
     - Si NO es el último paso: avanza a siguiente paso, pone `pending=true` al siguiente y resetea `countdown` a `DEFAULT_DEADLINE_SECONDS`.
     - Si es el último: marca `isFinished=true`, pone `countdown=0` y detiene el `timer`.
@@ -244,8 +245,8 @@ A continuación se muestran snapshots JSON ilustrativos del `DraftState` en mome
   "countdown": 30,
   "isFinished": false,
   "teams": {
-    "blue": { "name": "Blue", "ready": false },
-    "red": { "name": "Red", "ready": false }
+    "blue": { "name": "", "ready": false },
+    "red": { "name": "", "ready": false }
   },
   "steps": [
     { "id": 0, "type": "ban", "side": "blue", "place": 0, "pending": true,  "championId": null },
@@ -266,8 +267,8 @@ A continuación se muestran snapshots JSON ilustrativos del `DraftState` en mome
   "countdown": 30,
   "isFinished": false,
   "teams": {
-    "blue": { "name": "Blue", "ready": true },
-    "red": { "name": "Red", "ready": false }
+    "blue": { "name": "", "ready": true },
+    "red": { "name": "", "ready": false }
   },
   "steps": [
     { "id": 0, "type": "ban", "side": "blue", "place": 0, "pending": true,  "championId": null },
@@ -286,8 +287,8 @@ A continuación se muestran snapshots JSON ilustrativos del `DraftState` en mome
   "countdown": 29,
   "isFinished": false,
   "teams": {
-    "blue": { "name": "Blue", "ready": true },
-    "red": { "name": "Red", "ready": true }
+    "blue": { "name": "", "ready": true },
+    "red": { "name": "", "ready": true }
   },
   "steps": [
     { "id": 0, "type": "ban", "side": "blue", "place": 0, "pending": true,  "championId": null },
@@ -306,8 +307,8 @@ A continuación se muestran snapshots JSON ilustrativos del `DraftState` en mome
   "countdown": 21,
   "isFinished": false,
   "teams": {
-    "blue": { "name": "Blue", "ready": true },
-    "red": { "name": "Red", "ready": true }
+    "blue": { "name": "", "ready": true },
+    "red": { "name": "", "ready": true }
   },
   "steps": [
     { "id": 0, "type": "ban", "side": "blue", "place": 0, "pending": true,  "championId": 12 },
@@ -326,8 +327,8 @@ A continuación se muestran snapshots JSON ilustrativos del `DraftState` en mome
   "countdown": 30,
   "isFinished": false,
   "teams": {
-    "blue": { "name": "Blue", "ready": true },
-    "red": { "name": "Red", "ready": true }
+    "blue": { "name": "", "ready": true },
+    "red": { "name": "", "ready": true }
   },
   "steps": [
     { "id": 0, "type": "ban", "side": "blue", "place": 0, "pending": false, "championId": 12 },

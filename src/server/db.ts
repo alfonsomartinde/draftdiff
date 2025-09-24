@@ -241,69 +241,6 @@ export class DatabaseService {
       }
     }
   }
-
-  async saveEvent(
-    roomId: string,
-    started: boolean,
-    io: Server | undefined,
-    payload: { type: string; data: any; state?: DraftState },
-    stateForEnsure?: DraftState,
-  ) {
-    /**
-     * Persists an append-only event record (seq, type, payload) for a room.
-     *
-     * Notes:
-     * - No-op if draft has not started or if type is PING/JOIN.
-     * - Ensures room row exists (inserts if missing) when `stateForEnsure` is provided.
-     */
-    if (!started) return;
-    const type = payload.type;
-    if (type === 'PING' || type === 'JOIN') return;
-
-    const conn = await this.getConnection();
-    try {
-      await conn.beginTransaction();
-      if (!(await this.checkRoomExistsInternal(conn as unknown as Queryable, roomId))) {
-        if (!stateForEnsure) throw new Error('room_not_found');
-        await this.insertRoomIfMissing(conn, roomId, stateForEnsure);
-      }
-      const [rows] = await conn.query(
-        'SELECT IFNULL(MAX(seq),0)+1 AS next FROM events WHERE room_id=?',
-        [roomId],
-      );
-      const seq = Number((rows as any)[0].next);
-      await conn.query('INSERT INTO events (room_id, seq, type, payload) VALUES (?,?,?,?)', [
-        roomId,
-        seq,
-        type,
-        JSON.stringify(payload.data),
-      ]);
-      await conn.commit();
-      return seq;
-    } catch (err) {
-      await conn.rollback();
-      console.error('[API] saveEvent failed:', err);
-      throw err;
-    } finally {
-      conn.release();
-    }
-  }
-
-  async fetchRoomEvents(roomId: string) {
-    /**
-     * Returns all events for a room ordered by sequence, suitable for replay/spec.
-     */
-    const conn = await this.getConnection();
-    try {
-      const [rows] = await conn.query(
-        'SELECT seq, type, payload, created_at FROM events WHERE room_id=? ORDER BY seq ASC',
-        [roomId],
-      );
-      return rows as any[];
-    } finally {
-      conn.release();
-    }
-  }
 }
 
 export const databaseService = DatabaseService.instance;
