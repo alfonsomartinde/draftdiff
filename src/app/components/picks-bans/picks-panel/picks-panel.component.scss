@@ -1,3 +1,5 @@
+@use 'styles/variables' as vars;
+
 .picks {
   flex-direction: column;
   
@@ -21,4 +23,16 @@
   &.red { justify-content: flex-end; }
 }
 
+.pending {
+  animation: soft-blink vars.$soft-blink-duration ease-in-out infinite;
+  border-bottom: vars.$border-thickness solid;
+  &.blue { border-color: vars.$brand-blue; }
+  &.red { border-color: vars.$brand-red; }
+}
 
+.placeholder {
+  cursor: default;
+  background-color: #222643;
+  &.pending { background-color: #373c5f; }
+  &.red, &.blue { width: 100%; }
+}

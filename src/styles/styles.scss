@@ -8,6 +8,12 @@ html, body {
   color: #fff;
 }
 
+@keyframes soft-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.65; }
+  100% { opacity: 1; }
+}
+
 .antonio-100 {
   font-family: "Antonio", sans-serif;
   font-optical-sizing: auto;

@@ -2,9 +2,12 @@
 
 .team-name {
   font-size: vars.$team-name-font-size;
-  line-height: 1;
+  line-height: 1.1;
   width: 100%;
   height: vars.$panel-height;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   &.blue {
     text-align: left;

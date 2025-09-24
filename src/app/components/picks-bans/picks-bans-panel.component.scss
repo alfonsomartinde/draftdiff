@@ -1,11 +1,5 @@
 @use 'styles/variables' as vars;
 
-@keyframes soft-blink {
-  0% { opacity: 1; }
-  50% { opacity: 0.85; }
-  100% { opacity: 1; }
-}
-
 .picks {
   flex-direction: column;
   
@@ -37,6 +31,7 @@
 .team-name-wrapper {
   width: 100%;
   height: vars.$panel-height;
+  min-width: 0;
 }
 
 .countdown-wrapper {
@@ -51,21 +46,5 @@
   font-size: 1.8rem;
   text-transform: uppercase;
   line-height: 1;
-}
-
-
-.pending {
-  animation: soft-blink vars.$soft-blink-duration ease-in-out infinite;
-  border-bottom: vars.$border-thickness solid;
-  &.blue { border-color: vars.$brand-blue; }
-  &.red { border-color: vars.$brand-red; }
-}
-
-
-
-.placeholder {
-  background-color: #f0f0f0;
-  &.pending { background-color: #e0e0e0; }
-  &.red, &.blue { width: 100%; }
 }
 

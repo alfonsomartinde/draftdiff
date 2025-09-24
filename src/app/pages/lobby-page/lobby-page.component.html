@@ -39,7 +39,7 @@
             <i class="bi bi-clipboard"></i>&nbsp;{{ 'common.copy' | translate }}
             <span class="visually-hidden">{{ 'lobby.links.copyBlueTitle' | translate }}</span>
           </button>
-          <a [routerLink]="['/', roomId(), 'blue']" class="btn btn-primary">{{ 'common.open' | translate }}</a>
+          <a [routerLink]="['/', roomId(), 'blue']" class="btn btn-primary" target="_blank">{{ 'common.open' | translate }}</a>
         </div>
         <div class="input-group mb-3">
           <label for="redLink" class="input-group-text">{{ 'common.redSide' | translate }}</label>
@@ -48,7 +48,7 @@
             <i class="bi bi-clipboard"></i>&nbsp;{{ 'common.copy' | translate }}
             <span class="visually-hidden">{{ 'lobby.links.copyRedTitle' | translate }}</span>
           </button>
-          <a [routerLink]="['/', roomId(), 'red']" class="btn btn-danger">{{ 'common.open' | translate }}</a>
+          <a [routerLink]="['/', roomId(), 'red']" class="btn btn-danger" target="_blank">{{ 'common.open' | translate }}</a>
         </div>
         <div class="input-group mb-3">
           <label for="specLink" class="input-group-text">{{ 'common.spectator' | translate }}</label>
@@ -57,7 +57,7 @@
             <i class="bi bi-clipboard"></i>&nbsp;{{ 'common.copy' | translate }}
             <span class="visually-hidden">{{ 'lobby.links.copySpecTitle' | translate }}</span>
           </button>
-          <a [routerLink]="['/', roomId(), 'spec']" class="btn btn-secondary">{{ 'common.open' | translate }}</a>
+          <a [routerLink]="['/', roomId(), 'spec']" class="btn btn-secondary" target="_blank">{{ 'common.open' | translate }}</a>
         </div>
       </div>
     </div>
