@@ -55,8 +55,11 @@
 .champion {
   button {
     &:disabled {
-      filter: grayscale(85%);
       cursor: not-allowed;
+
+      img {
+        filter: grayscale(85%);
+      }
     }
   }
 }
