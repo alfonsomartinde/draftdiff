@@ -2,9 +2,10 @@ import { inject, Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { WorkerClientService } from '@services/worker-client.service';
 import { DraftActions } from './draft.actions';
+import { DraftAction } from '@models/draft-actions';
 import { EMPTY, of } from 'rxjs';
 import { filter, map, mergeMap, tap, distinctUntilChanged } from 'rxjs/operators';
-import { IPostMessage } from '@models/worker';
+import { IPostMessage, MESSAGE_TYPES } from '@models/worker';
 
 @Injectable()
 export class DraftEffects {
@@ -16,8 +17,8 @@ export class DraftEffects {
     this.client.incoming$.pipe(
       tap((m) => console.log('[draft-effects] INCOMING MESSAGE', m)),
       filter((m: IPostMessage | null): m is IPostMessage => !!m),
-      filter((m) => m.type === 'SERVER/STATE'),
-      map((m) => DraftActions['draft/hydrate']({ newState: m.payload.state })),
+      filter((m) => m.type === MESSAGE_TYPES.SERVER.STATE),
+      map((m) => DraftActions[DraftAction.HYDRATE]({ newState: m.payload.state })),
     ),
   );
 
@@ -25,10 +26,10 @@ export class DraftEffects {
   readonly incomingTick$ = createEffect(() =>
     this.client.incoming$.pipe(
       filter((m: IPostMessage | null): m is IPostMessage => !!m),
-      filter((m) => m.type === 'SERVER/TICK'),
+      filter((m) => m.type === MESSAGE_TYPES.SERVER.TICK),
       map((m) => {
         const s: any = m.payload?.state ?? {};
-        return DraftActions['draft/tick']({
+        return DraftActions[DraftAction.TICK]({
           newState: {
             countdown: Number(s.countdown ?? 0),
             eventSeq: Number(s.eventSeq ?? 0),
@@ -44,7 +45,7 @@ export class DraftEffects {
   readonly ready$ = createEffect(
     () =>
       this.actions$.pipe(
-        ofType(DraftActions['draft/ready']),
+        ofType(DraftActions[DraftAction.READY]),
         tap(({ roomId, side }) => this.client.ready({ roomId, side })),
       ),
     { dispatch: false },
@@ -53,7 +54,7 @@ export class DraftEffects {
   readonly select$ = createEffect(
     () =>
       this.actions$.pipe(
-        ofType(DraftActions['draft/select']),
+        ofType(DraftActions[DraftAction.SELECT]),
         tap(({ roomId, side, action, championId }) =>
           this.client.selectChampion({ roomId, side, action, championId: championId as number }),
         ),
@@ -64,7 +65,7 @@ export class DraftEffects {
   readonly confirm$ = createEffect(
     () =>
       this.actions$.pipe(
-        ofType(DraftActions['draft/confirm']),
+        ofType(DraftActions[DraftAction.CONFIRM]),
         tap(({ roomId, side, action }) => this.client.confirm({ roomId, side, action })),
       ),
     { dispatch: false },
@@ -73,7 +74,7 @@ export class DraftEffects {
   readonly setTeamName$ = createEffect(
     () =>
       this.actions$.pipe(
-        ofType(DraftActions['draft/set-team-name']),
+        ofType(DraftActions[DraftAction.SET_TEAM_NAME]),
         tap(({ roomId, side, name }) => this.client.setTeamName({ roomId, side, name })),
       ),
     { dispatch: false },

@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { Server } from 'socket.io';
 import mysql from 'mysql2/promise';
 import { createInitialDraftState, DraftState } from '@models/draft';
-import { IPostMessage } from '@models/worker';
+import { IPostMessage, MESSAGE_TYPES } from '@models/worker';
 import { databaseService } from './server/db';
 import { eventsService } from './server/events';
 import { existsSync } from 'node:fs';
@@ -22,6 +22,11 @@ const SSR_ENABLED = String(process.env['SSR'] ?? defaultSsr) === 'true';
  * - Serve static assets and optionally render SSR using @angular/ssr
  * - Provide REST endpoints for room creation and Data Dragon proxy
  * - Host Socket.io for real-time draft orchestration
+ *
+ * Flow overview:
+ * - Client connects via Socket.io and joins a room (CLIENT/JOIN)
+ * - Client actions (READY/SELECT/CONFIRM/SET_TEAM_NAME) are forwarded to EventsService
+ * - EventsService reduces domain state, persists, and emits SERVER/STATE/TICK messages
  */
 const app = express();
 let angularApp: any = null;
@@ -155,6 +160,7 @@ io.on('connection', (socket) => {
   socket.on('message', (msg: IPostMessage) => processSocketMessage(io, socket, msg));
 });
 
+/** Ensure there is a current step in the room state before handling actions. */
 function ensureStepExists(room: any): boolean {
   if (!room?.state) return false;
   const base = room.state as DraftState;
@@ -162,6 +168,7 @@ function ensureStepExists(room: any): boolean {
   return !!step;
 }
 
+/** Load persisted state from DB into memory when a room has no state yet. */
 async function hydrateStateIfMissing(roomId: string, room: any): Promise<void> {
   if (room?.state) return;
   try {
@@ -194,34 +201,40 @@ type MessageContext = {
   type: string;
 };
 
+function ctxSafeClientAt(payload: any): number {
+  const c = Number(payload?.clientAtMs ?? payload?.clientAt ?? NaN);
+  return Number.isFinite(c) ? c : Date.now();
+}
+
+/** Map of client message handlers. */
 const messageHandlers: Record<string, (ctx: MessageContext) => Promise<void> | void> = {
-  'CLIENT/JOIN': async ({ io, socket, roomId, room }) => {
+  [MESSAGE_TYPES.CLIENT.JOIN]: async ({ io, socket, roomId, room }) => {
     socket.join(roomId);
     await hydrateStateIfMissing(roomId, room);
     eventsService.handleJoin(io, roomId);
   },
-  'CLIENT/PING': ({ io, socket, roomId }) => {
-    socket.emit('message', { type: 'SERVER/PONG' });
-    io.to(roomId).emit('message', { type: 'SERVER/PONG' });
+  [MESSAGE_TYPES.CLIENT.PING]: ({ io, socket, roomId }) => {
+    socket.emit('message', { type: MESSAGE_TYPES.SERVER.PONG });
+    io.to(roomId).emit('message', { type: MESSAGE_TYPES.SERVER.PONG });
   },
-  'CLIENT/READY': async ({ io, roomId, room, payload }) => {
+  [MESSAGE_TYPES.CLIENT.READY]: async ({ io, socket, roomId, room, payload }) => {
     if (!ensureStepExists(room)) return;
-    console.log('CLIENT/READY received', payload);
-    await eventsService.handleReady(io, roomId, room, payload);
+    console.log(`${MESSAGE_TYPES.CLIENT.READY} received`, payload);
+    await eventsService.handleReady(io, roomId, room, { ...payload, clientAtMs: Number(payload?.clientAtMs ?? ctxSafeClientAt(payload)) }, socket);
   },
-  'CLIENT/SELECT': async ({ io, roomId, room, payload }) => {
+  [MESSAGE_TYPES.CLIENT.SELECT]: async ({ io, socket, roomId, room, payload }) => {
     if (!ensureStepExists(room)) return;
-    console.log('CLIENT/SELECT received', payload);
-    await eventsService.handleSelect(io, roomId, room, payload);
+    console.log(`${MESSAGE_TYPES.CLIENT.SELECT} received`, payload);
+    await eventsService.handleSelect(io, roomId, room, { ...payload, clientAtMs: Number(payload?.clientAtMs ?? ctxSafeClientAt(payload)) }, socket);
   },
-  'CLIENT/CONFIRM': async ({ io, roomId, room, payload }) => {
+  [MESSAGE_TYPES.CLIENT.CONFIRM]: async ({ io, socket, roomId, room, payload }) => {
     if (!ensureStepExists(room)) return;
-    console.log('CLIENT/CONFIRM received', payload);
-    await eventsService.handleConfirm(io, roomId, room, payload);
+    console.log(`${MESSAGE_TYPES.CLIENT.CONFIRM} received`, payload);
+    await eventsService.handleConfirm(io, roomId, room, { ...payload, clientAtMs: Number(payload?.clientAtMs ?? ctxSafeClientAt(payload)) }, socket);
   },
-  'CLIENT/SET_TEAM_NAME': async ({ io, roomId, room, payload }) => {
+  [MESSAGE_TYPES.CLIENT.SET_TEAM_NAME]: async ({ io, roomId, room, payload }) => {
     if (!ensureStepExists(room)) return;
-    console.log('CLIENT/SET_TEAM_NAME received', payload);
+    console.log(`${MESSAGE_TYPES.CLIENT.SET_TEAM_NAME} received`, payload);
     await eventsService.handleSetTeamName(io, roomId, room, payload);
   },
 };

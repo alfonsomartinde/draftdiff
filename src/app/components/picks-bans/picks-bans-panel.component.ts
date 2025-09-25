@@ -16,7 +16,7 @@ import { BansPanelComponent } from '@components/picks-bans/bans-panel/bans-panel
 import { PicksPanelComponent } from '@components/picks-bans/picks-panel/picks-panel.component';
 import { TimerComponent } from '@components/timer/timer.component';
 import { TeamNameComponent } from '@components/team-name/team-name.component';
-import { TRANSPARENT_PIXEL_GIF } from '@app/constants/images';
+import { splashFromMap, squareFromMap, loadingFromMap } from '@app/utils/images';
 
 /**
  * Composite panel that renders bans row, picks grid and team/timer header.
@@ -52,7 +52,6 @@ export class PicksBansPanelComponent {
     >
   >();
   readonly disableGrid = input<boolean>(false);
-  readonly champions = input<ChampionItem[]>([]);
   readonly usedIds = input<Set<number>>();
   readonly pickedChampion = output<ChampionItem>();
 
@@ -98,24 +97,30 @@ export class PicksBansPanelComponent {
 
   readonly isSpec = computed(() => this.route.snapshot.data['side'] === 'spec');
 
-  imgSplash(id: number | null): string {
-    if (id == null) return TRANSPARENT_PIXEL_GIF;
-    const image = this.imageById()?.[id];
-    if (!image) return TRANSPARENT_PIXEL_GIF;
-    return image.splashImage;
-  }
+  // Champion names map for PicksPanel (avoid fetching list in PicksPanel)
+  private readonly championsItemsSig = toSignal(
+    this.store.select((state: any) => state?.champions?.items ?? []),
+    { initialValue: [] as ChampionItem[] },
+  );
+  readonly getNameById = computed<((id: number | null) => string)>(() => {
+    const index = new Map<number, string>();
+    for (const c of this.championsItemsSig() ?? []) index.set(c.id, c.name);
+    return (id: number | null): string => {
+      if (id == null) return '';
+      return index.get(id) ?? '';
+    };
+  });
 
-  imgSquare(id: number | null): string {
-    if (id == null) return TRANSPARENT_PIXEL_GIF;
-    const image = this.imageById()?.[id];
-    if (!image) return TRANSPARENT_PIXEL_GIF;
-    return image.squareImage;
-  }
+  // Image resolver function for children
+  readonly getImageById = computed<((id: number | null) => { squareImage: string; loadingImage: string; splashImage: string } | null)>(() => {
+    const map = this.imageById();
+    return (id: number | null) => {
+      if (id == null) return null;
+      return map?.[id] ?? null;
+    };
+  });
 
-  imgLoading(id: number | null): string {
-    if (id == null) return TRANSPARENT_PIXEL_GIF;
-    const image = this.imageById()?.[id];
-    if (!image) return TRANSPARENT_PIXEL_GIF;
-    return image.loadingImage;
-  }
+  imgSplash(id: number | null): string { return splashFromMap(this.imageById(), id); }
+  imgSquare(id: number | null): string { return squareFromMap(this.imageById(), id); }
+  imgLoading(id: number | null): string { return loadingFromMap(this.imageById(), id); }
 }

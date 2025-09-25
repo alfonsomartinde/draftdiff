@@ -25,7 +25,6 @@
 
   <div class="col-6 text-center">
     <app-champions-grid
-      [champions]="champions()"
       [usedIds]="usedIds()"
       (pickedChampion)="pickedChampion.emit($event)"
       [disabled]="disableGrid()"

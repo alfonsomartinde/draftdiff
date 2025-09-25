@@ -1,4 +1,7 @@
 {
+  "app": {
+    "title": "Draft Diff"
+  },
   "common": {
     "copy": "Copiar",
     "open": "Abrir",
@@ -41,5 +44,11 @@
   "history": {
     "start": "Inicio",
     "events": "eventos"
+  },
+  "spec": {
+    "play": "Play",
+    "pause": "Pausa",
+    "continue": "Continuar",
+    "playAgain": "Reproducir de nuevo"
   }
 }

@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, inject, signal, input, output, OnInit } from '@angular/core';
+import { Component, computed, effect, inject, signal, input, output } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectDraft } from '@state/draft/draft.selectors';
 import { DraftActions } from '@state/draft/draft.actions';
+import { DraftAction } from '@models/draft-actions';
+import { EVENT_TYPES } from '@models/worker';
 import { withCountdown } from '@models/draft';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
@@ -11,8 +13,14 @@ import { TranslateModule } from '@ngx-translate/core';
 /**
  * DraftHistoryComponent
  *
- * Timeline slider to scrub through draft events. In uncontrolled mode applies
- * historical events deterministically; in controlled mode mirrors parent index.
+ * Purpose: Timeline slider to scrub through draft events.
+ * Why created: Provide a visual and interactive way to navigate the draft history.
+ * Modes:
+ * - Uncontrolled: the component applies events deterministically as user scrubs
+ * - Controlled: the parent drives the index (slider disabled) while replay is running
+ *
+ * Example:
+ * - User drags slider to index 5 → we rebuild state from base and apply events 0..5
  */
 @Component({
   selector: 'app-draft-history',
@@ -21,7 +29,7 @@ import { TranslateModule } from '@ngx-translate/core';
   templateUrl: './draft-history.component.html',
   styleUrls: ['./draft-history.component.scss'],
 })
-export class DraftHistoryComponent implements OnInit {
+export class DraftHistoryComponent {
   private readonly store = inject(Store);
 
   // Full draft state from store
@@ -54,20 +62,25 @@ export class DraftHistoryComponent implements OnInit {
     return Array.isArray(s?.events) ? s.events.length : 0;
   });
 
-  ngOnInit(): void {
-    this.index.set(this.currentIndex() ?? this.index());
+  constructor() {
+    this.effectClampIndexOnDataChange();
+    this.effectReflectControlledIndex();
+  }
 
+  /** Keep the local index within bounds when the draft data changes. */
+  private effectClampIndexOnDataChange(): void {
     effect(() => {
       const s = this.draft();
       if (!s) return;
-      // Keep index within bounds when data changes
       const len = Array.isArray(s.events) ? s.events.length : 0;
       const curr = this.index();
       if (curr > len - 1) this.index.set(len - 1);
       if (curr < -1) this.index.set(-1);
     });
+  }
 
-    // Reflect external controlled index updates reactively (replaces ngOnChanges)
+  /** Reflect external `currentIndex` updates when in controlled mode. */
+  private effectReflectControlledIndex(): void {
     effect(() => {
       const incoming = this.currentIndex();
       if (typeof incoming === 'number') {
@@ -83,6 +96,7 @@ export class DraftHistoryComponent implements OnInit {
    * and notifies the parent via `indexChanged` so the replay can resume from that point.
    * Ignored when `controlled` is true.
    */
+  /** Handle user move: rebuild base state and apply historical events up to `value`. */
   setIndex(value: number): void {
     if (this.controlled()) return; // ignore user input while controlled by parent (playing)
     const s = this.draft();
@@ -100,6 +114,10 @@ export class DraftHistoryComponent implements OnInit {
   }
 
   // Apply events deterministically from initial masked state up to given index
+  /**
+   * Deterministically rebuild the state from a clean base and apply 0..targetIndex events.
+   * Why: Avoid compounding effects; always start from a known base and reapply.
+   */
   private applyUpToIndex(targetIndex: number): void {
     const s = this.draft();
     if (!s) return;
@@ -107,7 +125,7 @@ export class DraftHistoryComponent implements OnInit {
     // Build a clean base state: keep roomId and team names only; reset steps and counters
     const base = this.buildInitialBaseFromState(s);
 
-    this.store.dispatch(DraftActions['draft/hydrate']({ newState: base }));
+    this.store.dispatch(DraftActions[DraftAction.HYDRATE]({ newState: base }));
 
     const events = Array.isArray(s.events) ? s.events : [];
 
@@ -125,12 +143,13 @@ export class DraftHistoryComponent implements OnInit {
       const ev = events[i];
       // When a confirmation happens, reset countdown to 30 immediately after applying
       this.applyHistoricalEvent(s.roomId, ev);
-      if (ev.type === 'CLIENT/CONFIRM' || ev.type === 'CONFIRM') {
+      if (ev.type === EVENT_TYPES.CLIENT.CONFIRM || ev.type === EVENT_TYPES.SERVER.CONFIRM) {
         this.dispatchTick(30);
       }
     }
   }
 
+  /** Build a minimal base state: reset steps, counters and keep only names/roomId. */
   private buildInitialBaseFromState(s: any): any {
     return {
       ...s,
@@ -152,31 +171,33 @@ export class DraftHistoryComponent implements OnInit {
     };
   }
 
+  /** Emit a tick with an explicit countdown value. */
   private dispatchTick(value: number): void {
     const curr = this.draft();
     if (curr) {
       this.store.dispatch(
-        DraftActions['draft/tick']({ newState: withCountdown(curr as any, value) }),
+        DraftActions[DraftAction.TICK]({ newState: withCountdown(curr as any, value) }),
       );
     }
   }
 
+  /** Apply one historical event into the store reflecting its captured countdown. */
   private applyHistoricalEvent(roomId: string, ev: any): void {
     // Reflect countdown as captured at event time
     const curr = this.draft();
     if (curr) {
       this.store.dispatch(
-        DraftActions['draft/tick']({ newState: withCountdown(curr as any, ev.countdownAt) }),
+        DraftActions[DraftAction.TICK]({ newState: withCountdown(curr as any, ev.countdownAt) }),
       );
     }
     switch (ev.type) {
-      case 'CLIENT/READY': {
-        this.store.dispatch(DraftActions['draft/ready']({ roomId, side: ev.payload.side }));
+      case EVENT_TYPES.CLIENT.READY: {
+        this.store.dispatch(DraftActions[DraftAction.READY]({ roomId, side: ev.payload.side }));
         break;
       }
-      case 'CLIENT/SELECT': {
+      case EVENT_TYPES.CLIENT.SELECT: {
         this.store.dispatch(
-          DraftActions['draft/select']({
+          DraftActions[DraftAction.SELECT]({
             roomId,
             side: ev.payload.side,
             action: ev.payload.action,
@@ -185,10 +206,10 @@ export class DraftHistoryComponent implements OnInit {
         );
         break;
       }
-      case 'CLIENT/CONFIRM':
-      case 'CONFIRM': {
+      case EVENT_TYPES.CLIENT.CONFIRM:
+      case EVENT_TYPES.SERVER.CONFIRM: {
         this.store.dispatch(
-          DraftActions['draft/confirm']({
+          DraftActions[DraftAction.CONFIRM]({
             roomId,
             side: ev.payload.side,
             action: ev.payload.action,
@@ -196,9 +217,9 @@ export class DraftHistoryComponent implements OnInit {
         );
         break;
       }
-      case 'CLIENT/SET_TEAM_NAME': {
+      case EVENT_TYPES.CLIENT.SET_TEAM_NAME: {
         this.store.dispatch(
-          DraftActions['draft/set-team-name']({
+          DraftActions[DraftAction.SET_TEAM_NAME]({
             roomId,
             side: ev.payload.side,
             name: ev.payload.name,
@@ -211,10 +232,11 @@ export class DraftHistoryComponent implements OnInit {
     }
   }
 
+  /** Reset the UI state to an initial masked base when there are no events. */
   private resetToInitial(): void {
     const s = this.draft();
     if (!s) return;
     const base = this.buildInitialBaseFromState(s);
-    this.store.dispatch(DraftActions['draft/hydrate']({ newState: base }));
+    this.store.dispatch(DraftActions[DraftAction.HYDRATE]({ newState: base }));
   }
 }

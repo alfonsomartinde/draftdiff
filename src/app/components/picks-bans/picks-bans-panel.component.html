@@ -2,7 +2,7 @@
   [bansBlue]="bansBlue()"
   [bansRed]="bansRed()"
   [hasStarted]="hasStarted()"
-  [imageById]="imageById()"
+  [getImageById]="getImageById()"
 >
   <div bans-center class="d-flex justify-content-center gap-2">
     <app-team-name 
@@ -27,11 +27,11 @@
 <app-picks-panel
   [picksBlue]="picksBlue()"
   [picksRed]="picksRed()"
-  [champions]="champions()"
   [usedIds]="usedIds()"
   [disableGrid]="disableGrid()"
   [isPending]="isPending()"
   [isSpec]="isSpec()"
-  [imageById]="imageById()"
+  [getImageById]="getImageById()"
+  [getNameById]="getNameById()"
   (pickedChampion)="pickedChampion.emit($event)"
 />

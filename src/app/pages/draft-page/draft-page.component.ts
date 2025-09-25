@@ -24,13 +24,20 @@ import { WorkerClientService } from '@services/worker-client.service';
 import { DraftActions } from '@state/draft/draft.actions';
 import { PicksBansPanelComponent } from '@components/picks-bans/picks-bans-panel.component';
 import { DraftSide, UserSide, IStep, ITeam } from '@models/draft';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DraftFacade } from '@services/draft-facade.service';
 
 /**
  * DraftPageComponent
  *
- * Hosts the main draft UI, connecting to the room via WorkerClientService and wiring
- * NgRx selectors into signals for the PicksBans panel. Provides actions for ready/select/confirm.
+ * Purpose: Host the main draft UI. Connects to a room, exposes selectors as signals
+ * for the `PicksBansPanel`, and provides actions for ready/select/confirm.
+ * Why created: Centralize user interaction for an ongoing draft.
+ *
+ * Example:
+ * - User clicks Ready → we emit READY for the user's side
+ * - User selects a champion → we dispatch SELECT for current step
+ * - User confirms → we dispatch CONFIRM and the draft advances
  */
 @Component({
   selector: 'app-draft-page',
@@ -44,6 +51,8 @@ export class DraftPageComponent {
   private readonly store = inject(Store);
   private readonly title = inject(Title);
   private readonly client = inject(WorkerClientService);
+  private readonly draft = inject(DraftFacade);
+  private readonly t = inject(TranslateService);
 
   // Champions data comes directly from ChampionsStore to avoid duplication
   protected readonly roomId = signal<string>('');
@@ -51,9 +60,14 @@ export class DraftPageComponent {
   readonly championsStatus = toSignal(this.store.select(selectChampionsStatus), {
     initialValue: 'idle' as const,
   });
+  // Champions items
+  // Proposal: use a service to get the champions list
   readonly championsItems = toSignal(this.store.select(selectChampionsItems), {
     initialValue: [] as ChampionItem[],
   });
+
+  // Champions image by id
+  // Proposal: use a service to get the image by id
   readonly imageById = toSignal(this.store.select(selectChampionsImageById), {
     initialValue: {} as Record<
       number,
@@ -130,44 +144,47 @@ export class DraftPageComponent {
   });
 
   constructor() {
-    // Get the room ID from the route
+    this.effectSyncRoomIdFromRoute();
+    this.effectConnectOnRoomId();
+    this.effectSetTitleOnRoom();
+  }
+
+  /** Sync `roomId` from route param. */
+  private effectSyncRoomIdFromRoute(): void {
     effect(() => {
       const id = this.route.snapshot.paramMap.get('roomId') ?? 'local';
       this.roomId.set(id);
     });
+  }
 
-    // Connect to the room
+  /** Connect socket when `roomId` is available. */
+  private effectConnectOnRoomId(): void {
     effect(() => {
-      if (this.roomId()) {
-        this.client.connect({
-          roomId: this.roomId(),
-        });
-      }
-    });
-
-    // Set the title
-    effect(() => {
-      if (this.roomId()) {
-        this.title.setTitle(`Draft Diff - ${this.mySide()}`);
-      }
-    });
-
-    // Countdown derived directly in UI via PicksBansPanel
-
-    // Trigger champions load; effect will guard by status/items
-    effect(() => {
-      const status = this.championsStatus();
-      if (status === 'idle') this.store.dispatch(ChampionsActions['champion/load']());
+      if (this.roomId()) this.client.connect({ roomId: this.roomId() });
     });
   }
 
+  /** Set tab title with side hint when room is present. */
+  private effectSetTitleOnRoom(): void {
+    effect(() => {
+      if (this.roomId()) {
+        const app = this.t.instant('app.title');
+        const side = this.mySide();
+        const sideLabel = side === 'blue' ? this.t.instant('common.blueSide') : side === 'red' ? this.t.instant('common.redSide') : this.t.instant('common.spectator');
+        this.title.setTitle(`${app} - ${sideLabel}`);
+      }
+    });
+  }
+
+  /** Mark current user side as ready (ignored for spectator). */
   ready(): void {
     if (!this.roomId()) return;
     const side = this.mySide();
     if (side === 'spec') return;
-    this.store.dispatch(DraftActions['draft/ready']({ roomId: this.roomId(), side }));
+    this.draft.ready(this.roomId(), side);
   }
 
+  /** Pick a champion for the current step when it is our turn. */
   pickedChampion(c: ChampionItem): void {
     if (!this.roomId()) return;
     if (!this.isMyTurn()) return;
@@ -176,16 +193,10 @@ export class DraftPageComponent {
     if (side === 'spec') return;
     const action = this.currentStep()?.type;
     if (!action) return;
-    this.store.dispatch(
-      DraftActions['draft/select']({
-        roomId: this.roomId(),
-        side,
-        action,
-        championId: c.id,
-      }),
-    );
+    this.draft.select(this.roomId(), side, action, c.id);
   }
 
+  /** Confirm current step when it is our turn. */
   confirmSelection(): void {
     if (!this.roomId()) return;
     if (!this.isMyTurn()) return;
@@ -193,6 +204,6 @@ export class DraftPageComponent {
     if (side === 'spec') return;
     const action = this.currentStep()?.type;
     if (!action) return;
-    this.store.dispatch(DraftActions['draft/confirm']({ roomId: this.roomId(), side, action }));
+    this.draft.confirm(this.roomId(), side, action);
   }
 }

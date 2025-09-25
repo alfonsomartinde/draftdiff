@@ -93,12 +93,14 @@ export function createInitialDraftState(options: Partial<DraftState> = {}): Draf
 
 export type EventSource = 'client' | 'server';
 
+import type { EVENT_TYPES } from './worker';
+
 export type EventType =
-  | 'CLIENT/READY'
-  | 'CLIENT/SELECT'
-  | 'CLIENT/CONFIRM'
-  | 'CLIENT/SET_TEAM_NAME'
-  | 'CONFIRM';
+  | typeof EVENT_TYPES.CLIENT.READY
+  | typeof EVENT_TYPES.CLIENT.SELECT
+  | typeof EVENT_TYPES.CLIENT.CONFIRM
+  | typeof EVENT_TYPES.CLIENT.SET_TEAM_NAME
+  | typeof EVENT_TYPES.SERVER.CONFIRM;
 
 export interface BaseEvent {
   seq: number;
@@ -107,30 +109,34 @@ export interface BaseEvent {
   type: EventType;
   // Countdown remaining (in seconds) at the moment the event was produced
   countdownAt: number;
+  // Optional: raw client timestamp in ms when the client created the action
+  clientAtMs?: number;
+  // Optional: server receive time in ms
+  serverReceiveAtMs?: number;
 }
 
 export interface ReadyEvent extends BaseEvent {
-  type: 'CLIENT/READY';
+  type: typeof EVENT_TYPES.CLIENT.READY;
   payload: { side: UserSide };
 }
 
 export interface SelectEvent extends BaseEvent {
-  type: 'CLIENT/SELECT';
+  type: typeof EVENT_TYPES.CLIENT.SELECT;
   payload: { side: UserSide; action: DraftType; championId: number | null };
 }
 
 export interface ConfirmEvent extends BaseEvent {
-  type: 'CLIENT/CONFIRM';
+  type: typeof EVENT_TYPES.CLIENT.CONFIRM;
   payload: { side: UserSide; action: DraftType; championId: number | null };
 }
 
 export interface AutoConfirmEvent extends BaseEvent {
-  type: 'CONFIRM';
+  type: typeof EVENT_TYPES.SERVER.CONFIRM;
   payload: { side: UserSide; action: DraftType; championId: number | null; reason: 'timeout' };
 }
 
 export interface SetTeamNameEvent extends BaseEvent {
-  type: 'CLIENT/SET_TEAM_NAME';
+  type: typeof EVENT_TYPES.CLIENT.SET_TEAM_NAME;
   payload: { side: UserSide; name: string };
 }
 

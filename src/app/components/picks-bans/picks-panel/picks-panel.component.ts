@@ -4,7 +4,7 @@ import { IStep } from '@models/draft';
 import { ChampionItem } from '@models/champion';
 import { ChampionsGridComponent } from '@components/champions/champions-grid.component';
 import { TranslateModule } from '@ngx-translate/core';
-import { TRANSPARENT_PIXEL_GIF } from '@app/constants/images';
+import { splashFromResolver } from '@app/utils/images';
 
 /**
  * PicksPanelComponent
@@ -23,13 +23,16 @@ import { TRANSPARENT_PIXEL_GIF } from '@app/constants/images';
 export class PicksPanelComponent {
   readonly picksBlue = input<IStep[]>([]);
   readonly picksRed = input<IStep[]>([]);
-  readonly champions = input<ChampionItem[]>([]);
+  // The picks panel no longer requires the champions list
   readonly usedIds = input<Set<number>>();
   readonly disableGrid = input<boolean>(false);
   readonly isPending = input<boolean>(false);
   readonly isSpec = input<boolean>(false);
-  readonly imageById =
-    input<Record<number, { splashImage: string; squareImage: string; loadingImage: string }>>();
+  readonly getImageById = input<
+    (id: number | null) => { splashImage: string; squareImage: string; loadingImage: string } | null
+  >();
+  // Provide champion names via function from parent
+  readonly getNameById = input<(id: number | null) => string>(() => '');
   readonly pickedChampion = output<ChampionItem>();
 
   /**
@@ -40,21 +43,8 @@ export class PicksPanelComponent {
    * ```
    */
   // Returns a function to get champion name by id using current champions input
-  readonly nameById = computed<(id: number | null) => string>(() => {
-    const list = this.champions() ?? [];
-    const index = new Map<number, string>();
-    for (const c of list) index.set(c.id, c.name);
-    return (id: number | null): string => {
-      if (id == null) return '';
-      return index.get(id) ?? '';
-    };
-  });
+  readonly nameById = computed<(id: number | null) => string>(() => this.getNameById());
 
-  /** Resolve splash image URL for a champion id or return a 1x1 placeholder. */
-  imgSplash = (id: number | null): string => {
-    if (id == null) return TRANSPARENT_PIXEL_GIF;
-    const image = this.imageById()?.[id];
-    if (!image) return TRANSPARENT_PIXEL_GIF;
-    return image.splashImage;
-  };
+  /** Resolve splash image URL using the provided resolver or return a 1x1 placeholder. */
+  imgSplash = (id: number | null): string => splashFromResolver(this.getImageById(), id);
 }

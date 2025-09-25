@@ -1,18 +1,18 @@
-<app-picks-bans-panel [imageById]="imageById()" [champions]="championsItems()" />
+<app-picks-bans-panel [imageById]="imageById()" />
 
 @if (isReplayMode()) {
   <div class="row mt-3">
     <div class="col-12 d-flex justify-content-center gap-2">
       <button
         type="button"
-        class="btn btn-primary antonio-700 px-4 py-2"
+        class="btn btn-primary antonio-700 px-4 py-2 btn-lg action-button"
         (click)="togglePlayback()"
       >
-        {{ playPauseLabel() }}
+        {{ playPauseLabel() | translate }}
       </button>
       <button
         type="button"
-        class="btn btn-outline-secondary antonio-700 px-4 py-2"
+        class="btn btn-outline-secondary antonio-700 px-4 py-2 btn-lg action-button"
         (click)="restart()"
       >
         {{ 'common.restart' | translate }}

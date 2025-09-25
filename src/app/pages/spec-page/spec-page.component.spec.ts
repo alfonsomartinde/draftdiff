@@ -5,6 +5,7 @@ import { provideStore } from '@ngrx/store';
 import { draftReducer, initialDraftState } from '@state/draft/draft.reducer';
 import { provideRouter } from '@angular/router';
 import { DraftState } from '@models/draft';
+import { MESSAGE_TYPES, EVENT_TYPES } from '@models/worker';
 
 describe('SpecPageComponent', () => {
   beforeEach(() => {
@@ -38,8 +39,8 @@ describe('SpecPageComponent', () => {
     const s: DraftState = {
       ...initialDraftState,
       events: [
-        { seq: 1, at: '', source: 'client', type: 'CLIENT/READY', payload: { side: 'blue' }, countdownAt: 30 },
-        { seq: 2, at: '', source: 'client', type: 'CLIENT/READY', payload: { side: 'red' }, countdownAt: 30 },
+        { seq: 1, at: '', source: 'client', type: EVENT_TYPES.CLIENT.READY as any, payload: { side: 'blue' }, countdownAt: 30 },
+        { seq: 2, at: '', source: 'client', type: EVENT_TYPES.CLIENT.READY as any, payload: { side: 'red' }, countdownAt: 30 },
       ],
     } as any;
     // override store-backed signal by replacing the callable with a stub
@@ -63,8 +64,8 @@ describe('SpecPageComponent', () => {
     const s: DraftState = {
       ...initialDraftState,
       events: [
-        { seq: 1, at: at0, source: 'client', type: 'CLIENT/READY', payload: { side: 'blue' }, countdownAt: 30 },
-        { seq: 2, at: at200, source: 'client', type: 'CLIENT/READY', payload: { side: 'red' }, countdownAt: 30 },
+        { seq: 1, at: at0, source: 'client', type: EVENT_TYPES.CLIENT.READY as any, payload: { side: 'blue' }, countdownAt: 30 },
+        { seq: 2, at: at200, source: 'client', type: EVENT_TYPES.CLIENT.READY as any, payload: { side: 'red' }, countdownAt: 30 },
       ],
     } as any;
     (c as any).draft = () => s;
@@ -96,8 +97,8 @@ describe('SpecPageComponent', () => {
     const s: DraftState = {
       ...initialDraftState,
       events: [
-        { seq: 1, at: '', source: 'client', type: 'CLIENT/READY', payload: { side: 'blue' }, countdownAt: 30 },
-        { seq: 2, at: '', source: 'client', type: 'CLIENT/READY', payload: { side: 'red' }, countdownAt: 30 },
+        { seq: 1, at: '', source: 'client', type: EVENT_TYPES.CLIENT.READY as any, payload: { side: 'blue' }, countdownAt: 30 },
+        { seq: 2, at: '', source: 'client', type: EVENT_TYPES.CLIENT.READY as any, payload: { side: 'red' }, countdownAt: 30 },
       ],
     } as any;
     (c as any).draft = () => s;

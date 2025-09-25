@@ -1,4 +1,5 @@
 import { Route } from '@angular/router';
+import { ChampionsResolver } from '@services/champions-resolver.service';
 
 export const routes: Route[] = [
   {
@@ -16,18 +17,21 @@ export const routes: Route[] = [
     loadComponent: () =>
       import('@pages/draft-page/draft-page.component').then((m) => m.DraftPageComponent),
     data: { side: 'red' },
+    resolve: { champions: ChampionsResolver },
   },
   {
     path: ':roomId/blue',
     loadComponent: () =>
       import('@pages/draft-page/draft-page.component').then((m) => m.DraftPageComponent),
     data: { side: 'blue' },
+    resolve: { champions: ChampionsResolver },
   },
   {
     path: ':roomId/spec',
     loadComponent: () =>
       import('@pages/spec-page/spec-page.component').then((m) => m.SpecPageComponent),
     data: { side: 'spec' },
+    resolve: { champions: ChampionsResolver },
   },
   { path: '**', redirectTo: '' },
 ];

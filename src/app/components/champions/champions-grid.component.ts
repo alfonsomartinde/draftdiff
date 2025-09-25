@@ -1,9 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, output, signal, effect } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { selectChampionsItems, selectChampionsStatus } from '@state/champions/champions.selectors';
+import { ChampionsFacade } from '@services/champions-facade.service';
 import { ChampionItem } from '@models/champion';
 import { ChampionsActions } from '@state/champions/champions.actions';
 import { TranslateModule } from '@ngx-translate/core';
@@ -25,7 +24,7 @@ import { TranslateModule } from '@ngx-translate/core';
   styleUrls: ['./champions-grid.component.scss'],
 })
 export class ChampionsGridComponent {
-  private readonly store = inject(Store);
+  private readonly championsFacade = inject(ChampionsFacade);
   readonly disabled = input<boolean>(false);
   readonly champions = input<ChampionItem[]>([]);
   readonly usedIds = input<Set<number>>();
@@ -35,22 +34,15 @@ export class ChampionsGridComponent {
   readonly query = signal<string>('');
   readonly pickedChampion = output<ChampionItem>();
 
-  // NgRx-backed signals
-  readonly status = toSignal(this.store.select(selectChampionsStatus), {
+  // Facade-backed signals
+  readonly status = toSignal(this.championsFacade.status$, {
     initialValue: 'idle' as const,
   });
-  readonly storeItems = toSignal(this.store.select(selectChampionsItems), {
+  readonly storeItems = toSignal(this.championsFacade.items$, {
     initialValue: [] as ChampionItem[],
   });
 
-  constructor() {
-    effect(() => {
-      const s = this.status();
-      if (s === 'idle') {
-        this.store.dispatch(ChampionsActions['champion/load']());
-      }
-    });
-  }
+  // Champions are preloaded via route resolver; no self-load here
 
   /**
    * @description Filters champions by name

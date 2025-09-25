@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise';
 import { DraftState } from '@models/draft';
 import { Server } from 'socket.io';
+import { MESSAGE_TYPES } from '@models/worker';
 
 type Queryable = {
   query: (sql: string, values?: any[]) => Promise<[any, any]>;
@@ -225,7 +226,7 @@ export class DatabaseService {
       await conn.query('UPDATE rooms SET state=? WHERE id=?', [stateStr, roomId]);
       await conn.commit();
       if (io) {
-        io.to(roomId).emit('message', { type: 'SERVER/STATE', payload: { state } });
+        io.to(roomId).emit('message', { type: MESSAGE_TYPES.SERVER.STATE, payload: { state } });
       }
     } catch (err) {
       try {

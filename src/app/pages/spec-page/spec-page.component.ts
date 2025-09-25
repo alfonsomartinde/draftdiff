@@ -9,6 +9,7 @@ import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ChampionsActions } from '@state/champions/champions.actions';
 import { DraftActions } from '@state/draft/draft.actions';
+import { DraftAction } from '@models/draft-actions';
 import {
   selectChampionsItems,
   selectChampionsImageById,
@@ -16,15 +17,30 @@ import {
 } from '@state/champions/champions.selectors';
 import { WorkerClientService } from '@services/worker-client.service';
 import { maskedFromCurrent, withCountdown } from '@models/draft';
-import { IPostMessage } from '@models/worker';
+import { IPostMessage, MESSAGE_TYPES } from '@models/worker';
 import { filter, take } from 'rxjs/operators';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { DraftFacade } from '@services/draft-facade.service';
+import { ReplayContext, ReplayScheduler } from '@services/replay.service';
+import { ReplayStrategySelector } from '@services/replay-strategy.selector';
 
 /**
  * SpecPageComponent
  *
- * Spectator view with replay controls. Allows pausing/continuing and scrubbing through
- * the events timeline while reflecting the original countdown values.
+ * Purpose: Spectator view with replay controls. It simulates the original cadence of a draft
+ * so viewers can play/pause/continue and scrub the timeline.
+ * Why created: Provide a faithful “replay” of a finished draft without requiring a live room.
+ *
+ * How it works (high-level):
+ * - Reads the draft state (including a chronological events array) from the store
+ * - Selects a replay strategy (currently real-time) and passes a small context interface
+ * - While playing, a scheduler applies events at their recorded timestamps; the countdown
+ *   reflects the original values (30 resets on confirm when not finished)
+ * - A slider allows scrubbing to any point; while playing it is controlled by the scheduler
+ *
+ * Example:
+ * - User clicks Play → scheduler starts → events apply with original delays → user clicks Pause →
+ *   scheduler pauses and can later Continue
  */
 @Component({
   selector: 'app-spec-page',
@@ -38,6 +54,10 @@ export class SpecPageComponent {
   private readonly title = inject(Title);
   private readonly store = inject(Store);
   private readonly client = inject(WorkerClientService);
+  private readonly draftFacade = inject(DraftFacade);
+  private readonly replaySelector = inject(ReplayStrategySelector);
+  private readonly t = inject(TranslateService);
+  private replay!: ReplayScheduler;
   protected readonly roomId = signal<string>('');
   
   // Draft state
@@ -69,12 +89,12 @@ export class SpecPageComponent {
   
   // Play/Pause label: Pause while playing, Continue if paused with progress, else Play
   protected readonly playPauseLabel = computed<string>(() => {
-    if (this.isReplaying()) return 'Pause';
+    if (this.isReplaying()) return 'spec.pause';
     const s = this.draft();
     const total = Array.isArray(s?.events) ? s.events.length : 0;
     const finished = this.replayIdx() >= total && this.replayCountdown() <= 0;
-    if (finished) return 'Play';
-    return this.replayIdx() > 0 || this.replayCountdown() < 30 ? 'Continue' : 'Play';
+    if (finished) return 'spec.playAgain';
+    return this.replayIdx() > 0 || this.replayCountdown() < 30 ? 'spec.continue' : 'spec.play';
   });
   // Timers: countdown decrements each second; events scheduled with real deltas between their timestamps
   private countdownTimer: any = null;
@@ -96,32 +116,51 @@ export class SpecPageComponent {
   });
 
   constructor() {
-    // Get the room ID from the route
+    // Group reactive wiring into small, self-explanatory effects
+    this.effectSetRoomIdFromRoute();
+    this.effectSetTitle();
+    this.effectConnectSocketOnRoomId();
+    this.effectCaptureInitialFinishedOnce();
+    this.effectMaskStateOnDeferredLoad();
+  }
+
+  /** Sync the `roomId` signal from current route. */
+  private effectSetRoomIdFromRoute(): void {
     effect(() => {
       const id = this.route.snapshot.paramMap.get('roomId') ?? 'local';
       this.roomId.set(id);
     });
+  }
 
-    // Set the title
+  /** Set document title for this page. */
+  private effectSetTitle(): void {
     effect(() => {
-      this.title.setTitle(`Draft Diff - spec`);
+      const app = this.t.instant('app.title');
+      const role = this.t.instant('common.spectator');
+      this.title.setTitle(`${app} - ${role}`);
     });
+  }
 
-    // Connect to room to hydrate state via socket events
+  /** Connect socket when a valid room id is present (hydrates state). */
+  private effectConnectSocketOnRoomId(): void {
     effect(() => {
       const id = this.roomId();
-      if (id) {
-        this.client.connect({ roomId: id });
-      }
+      if (id) this.client.connect({ roomId: id });
     });
+  }
 
-    // Capture initial finished state once to decide masking behavior
+  /**
+   * Capture whether the initial state (first SERVER/STATE) was already finished.
+   * Why: In deferred spec we want to mask state until replay starts.
+   */
+  private effectCaptureInitialFinishedOnce(): void {
     effect(() => {
       if (this.hasCapturedInitial()) return;
-      // Wait for the first SERVER/STATE from socket to avoid capturing the pre-hydrate default
       this.client.incoming$
         .pipe(
-          filter((m: IPostMessage | null): m is IPostMessage => !!m && m.type === 'SERVER/STATE'),
+          filter(
+            (m: IPostMessage | null): m is IPostMessage => !!m && m.type === MESSAGE_TYPES.SERVER.STATE,
+          ),
           take(1),
         )
         .subscribe((m) => {
@@ -130,20 +169,18 @@ export class SpecPageComponent {
           this.hasCapturedInitial.set(true);
         });
     });
+  }
 
-    // Trigger champions load; effect will guard by status/items
-    effect(() => {
-      const status = this.championsStatus();
-      if (status === 'idle') this.store.dispatch(ChampionsActions['champion/load']());
-    });
-
-    // In deferred spec mode: mask state to only show team names before starting replay
+  /**
+   * In deferred spec mode (finished on load), mask the state to only show team names
+   * until the user starts the replay. Disconnect socket to avoid re-hydrating final state.
+   */
+  private effectMaskStateOnDeferredLoad(): void {
     effect(() => {
       const s = this.draft();
       const finished = this.isFinished();
       if (!s) return;
-      if (!finished) return; // only mask when draft is finished (deferred mode)
-      // Only mask if the initial state on load was already finished (deferred load)
+      if (!finished) return;
       if (!this.hasCapturedInitial()) return;
       if (!this.initialWasFinished()) return;
       if (this.isReplaying()) return;
@@ -152,31 +189,24 @@ export class SpecPageComponent {
       if (!hasEvents) return;
 
       const masked = maskedFromCurrent(s as any);
-      this.store.dispatch(DraftActions['draft/hydrate']({ newState: masked }));
-      // Prevent server from immediately re-hydrating the final state again
-      // while we are paused at the beginning of the replay in deferred mode
+      this.store.dispatch(DraftActions[DraftAction.HYDRATE]({ newState: masked }));
       this.client.disconnect();
       this.isMasked.set(true);
     });
   }
 
-  // When user scrubs the history slider while paused, align replay pointers
+  /** When the user scrubs the slider, align replay pointers via scheduler. */
   onHistoryIndexChanged(index: number): void {
-    // Reflect selected slider index
+    // If a replay instance is active, delegate; otherwise align local pointers only
+    if (this.replay && this.replay.isRunning()) {
+      this.replay.scrubTo(index);
+      return;
+    }
     this.historyIndex.set(index);
-    const s = this.draft();
-    const events = s && Array.isArray(s.events) ? s.events : [];
-    // Next event to apply is one after the selected index; if -1, start from 0
+    const events = Array.isArray(this.draft()?.events) ? (this.draft()!.events as any[]) : [];
     const nextIdx = Math.max(0, (index ?? -1) + 1);
     this.replayIdx.set(nextIdx);
-    if (nextIdx >= events.length) {
-      // At or beyond last event: set countdown to 0 to indicate finished
-      this.replayCountdown.set(0);
-    } else {
-      // Set countdown to the next event's countdown value so resume starts from there
-      const nextEventCd = events[nextIdx]?.countdownAt ?? 30;
-      this.replayCountdown.set(nextEventCd);
-    }
+    this.replayCountdown.set(nextIdx >= events.length ? 0 : (events[nextIdx]?.countdownAt ?? 30));
   }
 
   private stopReplayTimer(): void {
@@ -195,7 +225,7 @@ export class SpecPageComponent {
     const s = this.draft();
     if (!s) return;
     const masked = maskedFromCurrent(s as any);
-    this.store.dispatch(DraftActions['draft/hydrate']({ newState: masked }));
+      this.store.dispatch(DraftActions[DraftAction.HYDRATE]({ newState: masked }));
     this.isMasked.set(true);
     // Reset runtime state and slider
     this.historyIndex.set(-1);
@@ -203,212 +233,67 @@ export class SpecPageComponent {
     this.replayCountdown.set(30);
   }
 
-  // Toggle play/pause without resetting position/state
+  /**
+   * Toggle play/pause without resetting state.
+   * Example: If paused mid-way, Continue resumes from the next event.
+   */
   togglePlayback(): void {
     if (this.isReplaying()) {
-      // Capture remaining ms to next scheduled event before stopping
-      if (this.nextEventTimer && this.nextEventDueAtMs > 0) {
-        const now = Date.now();
-        this.remainingToNextMs = Math.max(0, this.nextEventDueAtMs - now);
-      }
-      this.stopReplayTimer();
+      this.replay.pause();
+      this.isReplaying.set(false);
       return;
     }
-    // Ensure countdown is not behind the next event countdown (e.g., paused at 0 but next event at 30)
     const s = this.draft();
     const events = Array.isArray(s?.events) ? s.events : [];
-    if (this.replayIdx() < events.length) {
+    const finished = this.replayIdx() >= events.length && this.replayCountdown() <= 0;
+    if (finished) {
+      // If the previous run completed, restart to masked base and begin from the start
+      if (this.replay) {
+        this.replay.restartToMaskedBase();
+      } else {
+        // In the unlikely case replay isn't initialized yet, reset locally
+        this.historyIndex.set(-1);
+        this.replayIdx.set(0);
+        this.replayCountdown.set(30);
+      }
+    } else if (this.replayIdx() < events.length) {
       const nextEventCd = events[this.replayIdx()].countdownAt;
       if (nextEventCd > this.replayCountdown()) this.replayCountdown.set(nextEventCd);
     }
     this.startReplay();
   }
 
-  // Restart to beginning without auto-starting
+  /** Restart to masked beginning without auto-starting the replay. */
   restart(): void {
-    this.stopReplayTimer();
-    this.resetToMaskedBase();
+    this.replay.restartToMaskedBase();
   }
 
+  /**
+   * Start replay using the selected strategy.
+   * Preconditions: replay mode must be eligible and there must be events.
+   */
   startReplay(): void {
     if (!this.isReplayMode()) return;
-    if (this.isReplaying()) return;
+    // Choose strategy at start by current finished state
+    this.replay = this.replaySelector.selectStrategy({ isFinished: this.isFinished() });
+    if (this.replay.isRunning()) return;
     const state = this.draft();
     if (!state || !Array.isArray(state.events) || state.events.length === 0) return;
-    // Prepare spec replay environment and teams readiness
-    this.ensureSpecReplayReady();
+    const ctx: ReplayContext = {
+      getState: () => this.draft(),
+      getEvents: () => (this.draft()?.events ?? []) as any[],
+      getRoomId: () => this.roomId(),
+      setHistoryIndex: (i) => this.historyIndex.set(i),
+      getReplayIdx: () => this.replayIdx(),
+      setReplayIdx: (i) => this.replayIdx.set(i),
+      getReplayCountdown: () => this.replayCountdown(),
+      setReplayCountdown: (v) => this.replayCountdown.set(v),
+      maskedFromCurrent: (s) => maskedFromCurrent(s as any),
+      disconnectSocket: () => this.client.disconnect(),
+      onFinished: () => (this.isReplaying.set(false)),
+    };
+    this.replay.configure(ctx);
     this.isReplaying.set(true);
-    const events = state.events;
-
-    // Initialize countdown loop (independent from event schedule)
-    this.beginCountdownInterval();
-
-    // Schedule next event based on real timestamp deltas
-    this.scheduleNextEvent(events);
-  }
-
-  private ensureSpecReplayReady(): void {
-    // We already have all events: disconnect socket in spec mode to avoid further updates
-    this.client.disconnect();
-    // Ensure both teams are marked ready so UI reflects started state (pending highlights)
-    const roomId = this.roomId();
-    if (roomId) {
-      this.store.dispatch(DraftActions['draft/ready']({ roomId, side: 'blue' }));
-      this.store.dispatch(DraftActions['draft/ready']({ roomId, side: 'red' }));
-    }
-  }
-
-  private dispatchCountdownTick(value: number): void {
-    const current = this.draft();
-    if (current) {
-      this.store.dispatch(
-        DraftActions['draft/tick']({ newState: withCountdown(current as any, value) }),
-      );
-    }
-  }
-
-  private beginCountdownInterval(): void {
-    // Kick initial tick based on current replayCountdown
-    this.dispatchCountdownTick(this.replayCountdown());
-    if (this.countdownTimer) clearInterval(this.countdownTimer);
-    this.countdownTimer = setInterval(() => {
-      // Decrement countdown independently of events
-      const next = Math.max(0, this.replayCountdown() - 1);
-      this.replayCountdown.set(next);
-      this.dispatchCountdownTick(next);
-      // If finished and no more events pending, stop timers
-      const s = this.draft();
-      const total = Array.isArray(s?.events) ? s!.events.length : 0;
-      if (this.replayIdx() >= total && next <= 0) {
-        this.stopReplayTimer();
-      }
-    }, 1000);
-  }
-
-  private scheduleNextEvent(events: any[]): void {
-    if (this.nextEventTimer) {
-      clearTimeout(this.nextEventTimer);
-      this.nextEventTimer = null;
-    }
-    const idx = this.replayIdx();
-    if (idx >= events.length) return;
-
-    // Compute delay to next event preserving original inter-event timing
-    const nextEvent = events[idx];
-    const nextAt = new Date(nextEvent.at).getTime();
-
-    let delayMs = 0;
-    if (this.remainingToNextMs > 0) {
-      // Resuming from pause
-      delayMs = this.remainingToNextMs;
-      this.remainingToNextMs = 0;
-    } else {
-      // If starting from an intermediate index without prior event applied,
-      // base delta on previous event timestamp; otherwise, use lastAppliedEventAtMs
-      const prevAt = idx > 0 ? new Date(events[idx - 1].at).getTime() : nextAt;
-      const base = this.lastAppliedEventAtMs > 0 ? this.lastAppliedEventAtMs : prevAt;
-      const rawDelta = Number.isFinite(nextAt) && Number.isFinite(base) ? nextAt - base : 0;
-      delayMs = Math.max(0, rawDelta);
-    }
-
-    // Fast-path: apply synchronously when delay is zero or timestamps are invalid
-    if (delayMs === 0) {
-      const invalidTimes = !Number.isFinite(nextAt);
-      if (invalidTimes) {
-        // Apply at least one event to ensure immediate progress in tests
-        this.applyEvent(nextEvent as any);
-        this.historyIndex.set(idx);
-        this.lastAppliedEventAtMs = Date.now();
-        this.replayIdx.set(idx + 1);
-        this.scheduleNextEvent(events);
-        return;
-      } else {
-        // Establish base timestamp for zero-delta burst
-        const baseAt = this.lastAppliedEventAtMs > 0 ? this.lastAppliedEventAtMs : nextAt;
-        let i = this.replayIdx();
-        while (i < events.length) {
-          const ev = events[i];
-          const evAt = new Date(ev.at).getTime();
-          if (!Number.isFinite(evAt) || evAt - baseAt !== 0) break;
-          this.applyEvent(ev);
-          this.historyIndex.set(i);
-          this.lastAppliedEventAtMs = evAt;
-          i += 1;
-        }
-        this.replayIdx.set(i);
-        // After synchronous burst, schedule the subsequent event (if any)
-        this.scheduleNextEvent(events);
-        return;
-      }
-    }
-
-    this.nextEventDueAtMs = Date.now() + delayMs;
-    this.nextEventTimer = setTimeout(() => {
-      // Apply the event
-      this.applyEvent(nextEvent as any);
-      this.historyIndex.set(idx); // reflect in slider
-
-      // Update pointers
-      this.replayIdx.set(idx + 1);
-      this.lastAppliedEventAtMs = nextAt;
-
-      // Special handling: after confirm, reset countdown to 30 (unless finished)
-      if (nextEvent.type === 'CLIENT/CONFIRM' || nextEvent.type === 'CONFIRM') {
-        const s = this.draft();
-        const finished = s?.isFinished;
-        if (!finished) {
-          this.replayCountdown.set(30);
-          this.dispatchCountdownTick(30);
-        }
-      }
-
-      // Schedule subsequent event
-      this.scheduleNextEvent(events);
-    }, delayMs);
-  }
-
-  private applyEvent(ev: import('@models/draft').DraftEvent): void {
-    const roomId = this.roomId();
-    if (!roomId || !ev || typeof ev.type !== 'string') return;
-    switch (ev.type) {
-      case 'CLIENT/READY': {
-        this.store.dispatch(DraftActions['draft/ready']({ roomId, side: ev.payload.side }));
-        break;
-      }
-      case 'CLIENT/SELECT': {
-        this.store.dispatch(
-          DraftActions['draft/select']({
-            roomId,
-            side: ev.payload.side,
-            action: ev.payload.action,
-            championId: ev.payload.championId,
-          }),
-        );
-        break;
-      }
-      case 'CLIENT/CONFIRM':
-      case 'CONFIRM': {
-        this.store.dispatch(
-          DraftActions['draft/confirm']({
-            roomId,
-            side: ev.payload.side,
-            action: ev.payload.action,
-          }),
-        );
-        break;
-      }
-      case 'CLIENT/SET_TEAM_NAME': {
-        this.store.dispatch(
-          DraftActions['draft/set-team-name']({
-            roomId,
-            side: ev.payload.side,
-            name: ev.payload.name,
-          }),
-        );
-        break;
-      }
-      default:
-        break;
-    }
+    this.replay.start();
   }
 }

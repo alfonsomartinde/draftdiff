@@ -1,22 +1,31 @@
 import { Injectable } from '@angular/core';
 import { DraftType, UserSide } from '@models/draft';
-import { IPostMessage } from '@models/worker';
+import { IPostMessage, MESSAGE_TYPES } from '@models/worker';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '@/environments/environment';
 import { Subject } from 'rxjs';
 
+/**
+ * WorkerClientService
+ *
+ * Purpose: Single place to manage Socket.io client connection and message I/O.
+ * Why created: Encapsulate transport concerns away from components/effects.
+ * Responsibilities:
+ * - Connect/disconnect socket
+ * - Send typed client messages (JOIN/READY/SELECT/CONFIRM/...)
+ * - Expose incoming server messages via a Subject
+ *
+ * Example:
+ *   client.ready({ roomId, side: 'blue' }) → emits CLIENT/READY with clientAtMs.
+ */
 @Injectable({ providedIn: 'root' })
 export class WorkerClientService {
-  /**
-   * The worker
-   */
+  /** Socket.io client instance (lazy). */
   private socket?: Socket;
 
   readonly incoming$ = new Subject<IPostMessage | null>();
 
-  /**
-   * Post a message to the worker
-   */
+  /** Post a typed message to the server worker through Socket.io. */
   private post(message: IPostMessage): void {
     try {
       console.log('CLIENT: POST', message);
@@ -26,16 +35,12 @@ export class WorkerClientService {
     }
   }
 
-  /**
-   * Get the worker URL
-   */
+  /** Get the worker Socket.io URL from environment. */
   private getSocketUrl(): string {
     return environment.socketUrl;
   }
 
-  /**
-   * Connect to the worker
-   */
+  /** Connect to the server and join the provided room id. */
   connect({ roomId }: { roomId: string }): void {
     if (this.socket) return;
     const url = this.getSocketUrl();
@@ -46,9 +51,7 @@ export class WorkerClientService {
     setTimeout(() => this.ping({ roomId }), 0);
   }
 
-  /**
-   * Disconnect from the worker and cleanup
-   */
+  /** Disconnect and cleanup listeners. */
   disconnect(): void {
     try {
       this.socket?.removeAllListeners();
@@ -57,17 +60,7 @@ export class WorkerClientService {
     this.socket = undefined;
   }
 
-  /**
-   * Set the worker
-   */
-  // no-op, legacy
-  private setWorker(_workerUrl: string): void {
-    // Legacy method intentionally left blank
-  }
-
-  /**
-   * On message
-   */
+  /** Handle incoming messages and fan them out through incoming$. */
   private readonly onSocketMessage = (msg: any): void => {
     if (!msg) {
       console.warn('CLIENT: EMPTY MESSAGE RECEIVED');
@@ -80,81 +73,65 @@ export class WorkerClientService {
       return;
     }
 
-    if (msgType === 'SERVER/PONG') {
+    if (msgType === MESSAGE_TYPES.SERVER.PONG) {
       console.log('CLIENT: PONG RECEIVED');
       return;
     }
 
-    if (
-      msgType === 'SERVER/STATE' ||
-      msgType === 'SERVER/TICK' ||
-      msgType === 'SERVER/READY' ||
-      msgType === 'SERVER/SELECT' ||
-      msgType === 'SERVER/CONFIRM' ||
-      msgType === 'SERVER/SET_TEAM_NAME'
-    ) {
+    const allowed = new Set<string>([
+      MESSAGE_TYPES.SERVER.STATE,
+      MESSAGE_TYPES.SERVER.TICK,
+      MESSAGE_TYPES.SERVER.READY,
+      MESSAGE_TYPES.SERVER.SELECT,
+      MESSAGE_TYPES.SERVER.CONFIRM,
+      MESSAGE_TYPES.SERVER.SET_TEAM_NAME,
+    ]);
+    if (allowed.has(msgType)) {
       this.incoming$.next(msg as IPostMessage);
     } else {
       console.warn('CLIENT: UNKNOWN MESSAGE TYPE RECEIVED', msg);
     }
   };
 
-  /**
-   * Join a room
-   * @param roomId - The room ID
-   */
+  /** Join a room so the server starts sending state updates. */
   join({ roomId }: { roomId: string }): void {
     this.post({
-      type: 'CLIENT/JOIN',
+      type: MESSAGE_TYPES.CLIENT.JOIN,
       roomId,
+      clientAtMs: Date.now(),
     });
   }
 
-  /**
-   * Ping the worker
-   * @param roomId - The room ID
-   */
+  /** Send a ping for diagnostics (server replies with PONG). */
   ping({ roomId }: { roomId: string }): void {
     this.post({
-      type: 'CLIENT/PING',
+      type: MESSAGE_TYPES.CLIENT.PING,
       roomId,
+      clientAtMs: Date.now(),
     });
   }
 
-  /**
-   * Ready a side
-   * @param roomId - The room ID
-   * @param side - The side to ready
-   */
+  /** Mark a side as ready (second READY starts the timer). */
   ready({ roomId, side }: { roomId: string; side: UserSide }): void {
     this.post({
-      type: 'CLIENT/READY',
+      type: MESSAGE_TYPES.CLIENT.READY,
       roomId,
       payload: { side },
+      clientAtMs: Date.now(),
     });
   }
 
-  /**
-   * Confirm an champion selection
-   * @param roomId - The room ID
-   * @param side - The side to confirm
-   * @param action - The action to confirm
-   */
+  /** Confirm the current step (ends draft when last step). */
   confirm({ roomId, side, action }: { roomId: string; side: UserSide; action: DraftType }): void {
     this.post({
-      type: 'CLIENT/CONFIRM',
+      type: MESSAGE_TYPES.CLIENT.CONFIRM,
       roomId,
       payload: { side, action },
+      clientAtMs: Date.now(),
     });
   }
 
-  /**
-   * Select a champion
-   * @param roomId - The room ID
-   * @param side - The side to select a champion
-   * @param action - The action to select a champion
-   * @param championId - The champion ID to select
-   */
+  /** Select a champion for the current step. */
   selectChampion({
     roomId,
     side,
@@ -167,23 +144,20 @@ export class WorkerClientService {
     championId: number;
   }): void {
     this.post({
-      type: 'CLIENT/SELECT',
+      type: MESSAGE_TYPES.CLIENT.SELECT,
       roomId,
       payload: { side, action, championId },
+      clientAtMs: Date.now(),
     });
   }
 
-  /**
-   * Set the name of a team
-   * @param roomId - The room ID
-   * @param side - The side to set the name of
-   * @param name - The name to set
-   */
+  /** Update a team name. */
   setTeamName({ roomId, side, name }: { roomId: string; side: UserSide; name: string }): void {
     this.post({
-      type: 'CLIENT/SET_TEAM_NAME',
+      type: MESSAGE_TYPES.CLIENT.SET_TEAM_NAME,
       roomId,
       payload: { side, name },
+      clientAtMs: Date.now(),
     });
   }
 }

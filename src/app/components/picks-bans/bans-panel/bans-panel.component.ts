@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { IStep } from '@models/draft';
 import { TranslateModule } from '@ngx-translate/core';
-import { TRANSPARENT_PIXEL_GIF } from '@app/constants/images';
+import { squareFromResolver } from '@app/utils/images';
 
 /**
  * BansPanelComponent
@@ -21,12 +21,7 @@ export class BansPanelComponent {
   readonly bansBlue = input<IStep[]>([]);
   readonly bansRed = input<IStep[]>([]);
   readonly hasStarted = input<boolean>(false);
-  readonly imageById = input<Record<number, { squareImage: string }>>();
+  readonly getImageById = input<(id: number | null) => { squareImage: string } | null>();
 
-  imgSquare = (id: number | null): string => {
-    if (id == null) return TRANSPARENT_PIXEL_GIF;
-    const image = this.imageById()?.[id];
-    if (!image) return TRANSPARENT_PIXEL_GIF;
-    return image.squareImage;
-  };
+  imgSquare = (id: number | null): string => squareFromResolver(this.getImageById(), id);
 }

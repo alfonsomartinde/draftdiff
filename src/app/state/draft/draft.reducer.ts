@@ -1,6 +1,7 @@
 import { createReducer, on } from '@ngrx/store';
 import { DraftActions } from './draft.actions';
 import { DraftState, createInitialDraftState } from '@models/draft';
+import { DraftAction } from '@models/draft-actions';
 
 export const initialDraftState: DraftState = createInitialDraftState();
 
@@ -8,7 +9,7 @@ export const draftReducer = createReducer(
   initialDraftState,
 
   // payload: { ...newState }
-  on(DraftActions['draft/hydrate'], (state, { newState }) => {
+  on(DraftActions[DraftAction.HYDRATE], (state, { newState }) => {
     const currentSeq = state?.eventSeq ?? 0;
     const incomingSeq = newState?.eventSeq ?? 0;
 
@@ -57,7 +58,7 @@ export const draftReducer = createReducer(
   }),
 
   // payload: { newState: { countdown, eventSeq? } }
-  on(DraftActions['draft/tick'], (state, { newState }) => {
+  on(DraftActions[DraftAction.TICK], (state, { newState }) => {
     const currentSeq = state?.eventSeq ?? 0;
     const incomingSeq = (newState as any)?.eventSeq ?? currentSeq;
 
@@ -84,7 +85,7 @@ export const draftReducer = createReducer(
   }),
 
   // payload: { roomId, side }
-  on(DraftActions['draft/ready'], (state, { roomId, side }) => ({
+  on(DraftActions[DraftAction.READY], (state, { roomId, side }) => ({
     ...state,
     teams: {
       blue: {
@@ -99,7 +100,7 @@ export const draftReducer = createReducer(
   })),
 
   // payload: { roomId, side, name }
-  on(DraftActions['draft/set-team-name'], (state, { roomId, side, name }) => ({
+  on(DraftActions[DraftAction.SET_TEAM_NAME], (state, { roomId, side, name }) => ({
     ...state,
     teams: {
       blue: {
@@ -114,7 +115,7 @@ export const draftReducer = createReducer(
   })),
 
   // payload: { roomId, side, action, championId }
-  on(DraftActions['draft/select'], (state, { roomId, side, action, championId }) => {
+  on(DraftActions[DraftAction.SELECT], (state, { roomId, side, action, championId }) => {
     const idx = state.currentStepId;
     const step = state.steps[idx];
 
@@ -130,7 +131,7 @@ export const draftReducer = createReducer(
   }),
 
   // payload: { roomId, side, action }
-  on(DraftActions['draft/confirm'], (state, { roomId, side, action }) => {
+  on(DraftActions[DraftAction.CONFIRM], (state, { roomId, side, action }) => {
     const idx = state.currentStepId;
     const step = state.steps[idx];
 

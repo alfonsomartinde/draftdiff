@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { RoomsService } from '@services/rooms.service';
 import { DraftActions } from '@state/draft/draft.actions';
+import { DraftAction } from '@models/draft-actions';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectRoomId } from '@state/draft/draft.selectors';
 import { Store } from '@ngrx/store';
@@ -45,7 +46,7 @@ export class LobbyPageComponent implements OnInit {
       })
       .then((state: DraftState) => {
         if (!state) return;
-        this.store.dispatch(DraftActions['draft/hydrate']({ newState: state }));
+        this.store.dispatch(DraftActions[DraftAction.HYDRATE]({ newState: state }));
       })
       .catch((err) => {
         console.error('LobbyPageComponent: Failed to create room', err);
