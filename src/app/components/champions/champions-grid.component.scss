@@ -21,28 +21,28 @@
 
 .champions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.25rem;
   height: 18rem;
 
   /* Bootstrap-like breakpoints without importing the whole framework */
   @media (min-width: 576px) { /* sm */
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     height: 19rem;
   }
 
   @media (min-width: 768px) { /* md */
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     height: 25rem;
   }
 
   @media (min-width: 992px) { /* lg */
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     height: 34rem;
   }
 
   @media (min-width: 1200px) { /* xl */
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(9, 1fr);
     height: 42rem;
   }
 
